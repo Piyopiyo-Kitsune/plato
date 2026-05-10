@@ -67,7 +67,7 @@ function PacingSection({ stats }) {
             <span className="mt-0.5 text-yellow-600" aria-hidden="true">⚠️</span>
             <div>
               <div className="font-semibold text-yellow-900 text-sm">
-                Systemic pacing issue detected — {Math.round(overTargetFraction * 100)}% of completions went over target, averaging {avgExchangesOverTarget} exchanges
+                Systemic pacing issue detected — {Math.round(overTargetFraction * 100)}% of completions went over target, averaging {Math.round(avgExchangesOverTarget)} exchanges
               </div>
               <div className="mt-1 text-xs text-yellow-800">
                 When both the fraction of over-target completions and the average exchange count are elevated together, it typically signals a lesson-design mismatch rather than individual learner difficulty. Recommended actions:
@@ -191,7 +191,7 @@ export default function AdminHome() {
       adminApi('GET', '/v1/admin/knowledge-base'),
       adminApi('GET', '/v1/admin/stats/lessons'),
     ]).then(([users, invites, kb, stats]) => {
-      setActiveCount(Array.isArray(users) ? users.filter(u => u.role !== 'admin').length : 0);
+      setActiveCount(Array.isArray(users) ? users.length : 0);
       setPendingCount(Array.isArray(invites) ? invites.filter(i => i.status === 'pending').length : 0);
       setHasKB(!!(kb && kb.content && kb.content.trim()));
       setLessonStats(stats && typeof stats === 'object' ? stats : null);
