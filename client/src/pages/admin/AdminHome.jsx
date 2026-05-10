@@ -36,6 +36,9 @@ function PacingSection({ stats }) {
   const overTargetFraction = hasCompletions ? overTarget / totalCompletions : 0;
   const overTargetFractionHigh = overTargetFraction > 0.25;
 
+  // Compound alert: both fraction AND avg exchanges are elevated simultaneously
+  const showCompoundAlert = overTargetFractionHigh && overTargetWarning && hasCompletions;
+
   let cardClasses = '';
   let signal = '';
   let signalDetail = null;
@@ -57,6 +60,28 @@ function PacingSection({ stats }) {
   return (
     <>
       <h2 className="text-lg font-semibold mt-8 mb-4">Lesson Pacing</h2>
+
+      {showCompoundAlert && (
+        <div className="mb-4 rounded-lg border border-yellow-400 bg-yellow-50 p-4 ring-2 ring-yellow-300">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 text-yellow-600" aria-hidden="true">⚠️</span>
+            <div>
+              <div className="font-semibold text-yellow-900 text-sm">
+                Systemic pacing issue detected — {Math.round(overTargetFraction * 100)}% of completions went over target, averaging {avgExchangesOverTarget} exchanges
+              </div>
+              <div className="mt-1 text-xs text-yellow-800">
+                When both the fraction of over-target completions and the average exchange count are elevated together, it typically signals a lesson-design mismatch rather than individual learner difficulty. Recommended actions:
+              </div>
+              <ul className="mt-1 text-xs text-yellow-800 list-disc list-inside space-y-0.5">
+                <li>Review lessons in <Link to="/plato/lessons" className="underline font-medium">Lessons</Link> — look for lessons with 4 objectives or a broad exemplar scope</li>
+                <li>Aim for 2–3 tightly scoped learning objectives per lesson</li>
+                <li>Consider splitting any lesson that covers more than one distinct skill</li>
+                <li>Check that each exemplar demonstrates mastery of a single, narrow outcome</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card className={`mb-4 ${cardClasses}`}>
         <CardContent>
@@ -166,44 +191,41 @@ export default function AdminHome() {
       adminApi('GET', '/v1/admin/knowledge-base'),
       adminApi('GET', '/v1/admin/stats/lessons'),
     ]).then(([users, invites, kb, stats]) => {
-      setActiveCount(Array.isArray(users) ? users.length : 0);
+      setActiveCount(Array.isArray(users) ? users.filter(u => u.role !== 'admin').length : 0);
       setPendingCount(Array.isArray(invites) ? invites.filter(i => i.status === 'pending').length : 0);
-      setHasKB(!!kb?.content);
-      setLessonStats(stats);
+      setHasKB(!!(kb && kb.content && kb.content.trim()));
+      setLessonStats(stats && typeof stats === 'object' ? stats : null);
     }).catch(() => {});
   }, []);
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-      <p className="text-muted-foreground mb-6">Manage users and settings for plato.</p>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
 
-      {!hasKB && (
-        <Link to="/plato/setup-kb" className="block no-underline mb-6">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 hover:bg-amber-100 transition-colors" role="alert">
-            <strong>Set up your knowledge base</strong> — tell plato about your program so the AI can give learners informed answers.{' '}
-            <span className="underline">Get started</span>
-          </div>
-        </Link>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link to="/plato/users" className="no-underline">
-          <Card className="hover:ring-2 hover:ring-primary/30 transition-shadow cursor-pointer">
-            <CardContent>
-              <div className="text-3xl font-bold">{activeCount}</div>
-              <div className="text-sm text-muted-foreground">Active users</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link to="/plato/users" className="no-underline">
-          <Card className="hover:ring-2 hover:ring-primary/30 transition-shadow cursor-pointer">
-            <CardContent>
-              <div className="text-3xl font-bold">{pendingCount}</div>
-              <div className="text-sm text-muted-foreground">Pending invites</div>
-            </CardContent>
-          </Card>
-        </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeCount}</div>
+            <div className="text-sm text-muted-foreground">Active learners</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingCount}</div>
+            <div className="text-sm text-muted-foreground">Pending invites</div>
+          </CardContent>
+        </Card>
+        <Card className={!hasKB ? 'border-yellow-300 bg-yellow-50 ring-2 ring-yellow-200' : ''}>
+          <CardContent>
+            <div className="text-2xl font-bold">{hasKB ? '✓' : '!'}</div>
+            <div className="text-sm text-muted-foreground">Knowledge base</div>
+            {!hasKB && (
+              <div className="text-xs mt-1 text-yellow-800">
+                No knowledge base set — <Link to="/plato/knowledge-base" className="underline">add one</Link> to give the coach program context.
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {lessonStats && <PacingSection stats={lessonStats} />}
