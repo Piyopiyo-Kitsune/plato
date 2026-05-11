@@ -40,19 +40,20 @@ function assertNotImpersonating(action) {
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /**
- * Throw a learner-friendly error if an image data URL decodes to more than
- * 5 MB — Bedrock rejects larger images with a cryptic ValidationException.
- * Returns silently for non-image URLs or URLs without a parseable base64 body.
+ * Throw a learner-friendly error if an image or document data URL decodes to more than
+ * 5 MB — Bedrock rejects larger files with a cryptic ValidationException.
+ * Returns silently for URLs without a parseable base64 body.
  */
 export function assertImageWithinBedrockLimit(imageDataUrl) {
   if (!imageDataUrl) return;
-  const match = imageDataUrl.match(/^data:image\/\w+;base64,(.+)$/);
+  let match = imageDataUrl.match(/^data:(image\/\w+|application\/pdf);base64,(.+)$/);
   if (!match) return;
-  const estimatedBytes = Math.floor(match[1].length * 3 / 4);
+  const estimatedBytes = Math.floor(match[2].length * 3 / 4);
+  const fileType = match[1].startsWith('image/') ? 'Image' : 'PDF';
   if (estimatedBytes > MAX_IMAGE_BYTES) {
     throw new Error(
-      `Image is too large (${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB). ` +
-      `Please resize it to under 5 MB and try again.`
+      `${fileType} is too large (${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB). ` +
+      `Please reduce the file size to under 5 MB and try again.`
     );
   }
 }
@@ -203,9 +204,16 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, onStream
   const userParts = [];
   if (text) userParts.push({ type: 'text', text });
   if (imageDataUrl) {
-    const match = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
+    // Try image format first
+    let match = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
     if (match) {
       userParts.push({ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } });
+    } else {
+      // Try PDF document format
+      match = imageDataUrl.match(/^data:(application\/pdf);base64,(.+)$/);
+      if (match) {
+        userParts.push({ type: 'document', source: { type: 'base64', media_type: match[1], data: match[2] } });
+      }
     }
   }
 

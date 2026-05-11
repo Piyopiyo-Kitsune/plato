@@ -264,13 +264,27 @@ export default function LessonChat() {
       case MSG_TYPES.GUIDE:
         return <AssistantMessage key={idx} content={msg.content} />;
       case MSG_TYPES.USER:
+        const isPdf = msg.metadata?.imageDataUrl?.startsWith('data:application/pdf');
         return (
           <div key={idx}>
             {msg.content && <UserMessage content={msg.content} />}
             {msg.metadata?.imageDataUrl && (
               <div className="flex justify-end mt-1">
                 <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-primary p-1.5">
-                  <img src={msg.metadata.imageDataUrl} alt="Your uploaded work" className="max-w-full rounded-lg" />
+                  {isPdf ? (
+                    <div className="flex items-center gap-2 px-2 py-1">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-primary-foreground">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                      </svg>
+                      <span className="text-sm text-primary-foreground">PDF Document</span>
+                    </div>
+                  ) : (
+                    <img src={msg.metadata.imageDataUrl} alt="Your uploaded work" className="max-w-full rounded-lg" />
+                  )}
                 </div>
               </div>
             )}
