@@ -177,18 +177,26 @@ export async function startLesson(lessonId, lesson, onStream) {
 }
 
 /**
+ * Normalize the imageDataUrl argument to a non-null array.
+ * Accepts: null, '', a single data URL string, or an array of data URLs.
+ * Exported for unit testing — callers should pass an array.
+ */
+export function normalizeImageDataUrls(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.filter(Boolean);
+  return [input];
+}
+
+/**
  * Send a message in the lesson conversation.
- * @param {string|string[]} imageDataUrl - single data URL, array of data URLs, or null
+ * @param {string|string[]|null} imageDataUrl - data URL(s) for attached images
  */
 export async function sendMessage(lessonId, lesson, text, imageDataUrl, onStream) {
   assertNotImpersonating('send a message');
   let lessonKB = await getLessonKB(lessonId);
   const profileSummary = await getLearnerProfileSummary();
 
-  // Normalize to array for uniform handling
-  const imageDataUrls = Array.isArray(imageDataUrl)
-    ? imageDataUrl.filter(Boolean)
-    : imageDataUrl ? [imageDataUrl] : [];
+  const imageDataUrls = normalizeImageDataUrls(imageDataUrl);
 
   // Validate and save images
   const imageKeys = [];
@@ -251,8 +259,8 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, onStream
 
   // Save messages
   const newMessages = [
-    { role: 'user', content: text || (imageKeys.length > 0 ? '[image]' : ''), msgType: MSG_TYPES.USER, phase,
-      metadata: imageKeys.length > 0 ? { imageDataUrl: imageDataUrls[0] || null } : null, timestamp: ts() },
+    { role: 'user', content: text || (imageDataUrls.length > 0 ? '[image]' : ''), msgType: MSG_TYPES.USER, phase,
+      metadata: imageDataUrls.length > 0 ? { imageDataUrls: [...imageDataUrls] } : null, timestamp: ts() },
     { role: 'assistant', content: parsed.text, msgType: MSG_TYPES.GUIDE, phase, timestamp: ts() },
   ];
 
