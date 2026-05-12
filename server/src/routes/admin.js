@@ -894,12 +894,31 @@ admin.put('/v1/admin/plugins/:id/settings', async (c) => {
   }
 });
 
-// GET /v1/admin/stats/lessons — lesson pacing KPIs
-// MAX_EXCHANGES is a design target, never a cutoff. Lessons always run until
-// the coach awards progress 10 — the system does not force-complete anyone.
-// `extendedThreshold` (2x target) is informational only: a lesson that runs
-// that long usually means the lesson design mismatched the learner, not that
-// the coach should close harder.
+// GET /v1/admin/stats/lessons — lesson pacing + learner engagement KPIs
+//
+// Powers the admin dashboard at `/plato`. Two families of metrics:
+//   - Pacing: how on-target completed lessons are (on-target rate, over-target
+//     count, extended-lesson count). MAX_EXCHANGES is a design target, never a
+//     cutoff. `extendedThreshold` (2x target) is informational only — a lesson
+//     that runs that long signals a lesson-design mismatch, not a coach
+//     failure.
+//   - Engagement: `pctStarted` (target >90%) and `pctCompletedHalf` (target
+//     >50%). Denominator is non-admin users; "started" = ≥1 lessonKB:* of any
+//     status; "completed half" = lessonsCompleted / lessonsAvailable > 0.5
+//     (strict — exactly 50% does not count).
+//
+// Response shape: a flat object with all metric fields plus a `computedAt`
+// ISO timestamp (server-generated). The dashboard renders this directly.
+//
+// Caching: stale-while-revalidate (see server/src/lib/lesson-stats-cache.js).
+// Fresh window 10 min; stale window 10 min – 24 h serves cached + fires an
+// async Lambda self-invoke for refresh; older than 24 h or missing recomputes
+// synchronously. The fan-in (every user × every sync-data item) means the
+// recompute should never be on the hot path.
+//
+// `?refresh=1` bypasses the cache and recomputes synchronously — the dashboard's
+// Refresh button uses it. Admin-gated like everything under /v1/admin.
+
 // Pure aggregation — no Hono, no cache, no auth. Exported so the async-refresh
 // path (server/src/index.js handler dispatching a self-invoke) can call it
 // directly without going through the HTTP layer.
