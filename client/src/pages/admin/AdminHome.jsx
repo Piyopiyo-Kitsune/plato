@@ -13,6 +13,81 @@ function estimateDuration(avgExchangesPerCompletion) {
   return Math.round(avgExchangesPerCompletion * MINS_PER_EXCHANGE * 10) / 10;
 }
 
+function EngagementWidget({ label, valuePct, count, total, targetPct, targetCopy }) {
+  const noData = valuePct == null;
+  const onTarget = !noData && valuePct >= targetPct;
+  const cardClass = noData
+    ? ''
+    : onTarget
+      ? 'border-green-300 bg-green-50 ring-2 ring-green-200'
+      : 'border-red-300 bg-red-50 ring-2 ring-red-200';
+  const badgeClass = noData
+    ? 'bg-muted text-muted-foreground'
+    : onTarget
+      ? 'bg-green-200 text-green-900'
+      : 'bg-red-200 text-red-900';
+  const badgeText = noData ? '—' : onTarget ? 'On target' : 'Below target';
+  return (
+    <Card className={cardClass}>
+      <CardContent>
+        <div className="flex items-baseline justify-between gap-2">
+          <div>
+            <div className="text-sm font-medium">{label}</div>
+            <div className="text-4xl font-bold mt-1">{noData ? '—' : `${valuePct}%`}</div>
+          </div>
+          <span className={`text-[10px] uppercase tracking-wide font-semibold px-2 py-0.5 rounded ${badgeClass}`}>
+            {badgeText}
+          </span>
+        </div>
+        <div className="text-xs text-muted-foreground mt-2">Target: {targetCopy}</div>
+        {!noData && (
+          <div className="text-sm mt-1">
+            {count} of {total} learner{total !== 1 ? 's' : ''}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LearnerEngagementSection({ stats }) {
+  const {
+    activeLearners = 0,
+    learnersStarted = 0,
+    learnersCompletedHalf = 0,
+    pctStarted = null,
+    pctCompletedHalf = null,
+    targetStartedPct = 90,
+    targetCompletedHalfPct = 50,
+  } = stats;
+
+  if (activeLearners === 0) return null;
+
+  return (
+    <>
+      <h2 className="text-lg font-semibold mt-8 mb-4">Learner Engagement</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <EngagementWidget
+          label="Started lessons"
+          valuePct={pctStarted}
+          count={learnersStarted}
+          total={activeLearners}
+          targetPct={targetStartedPct}
+          targetCopy={`≥${targetStartedPct}% of learners have started at least one lesson`}
+        />
+        <EngagementWidget
+          label="Completed 50%+ of lessons"
+          valuePct={pctCompletedHalf}
+          count={learnersCompletedHalf}
+          total={activeLearners}
+          targetPct={targetCompletedHalfPct}
+          targetCopy={`≥${targetCompletedHalfPct}% of learners have completed more than half of their available lessons`}
+        />
+      </div>
+    </>
+  );
+}
+
 function PacingSection({ stats }) {
   const {
     totalCompletions = 0, withinTarget = 0, overTarget = 0, extendedLessons = 0,
@@ -205,6 +280,7 @@ export default function AdminHome() {
         </Link>
       </div>
 
+      {lessonStats && <LearnerEngagementSection stats={lessonStats} />}
       {lessonStats && <PacingSection stats={lessonStats} />}
     </div>
   );
