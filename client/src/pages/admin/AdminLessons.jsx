@@ -12,9 +12,10 @@ import {
 import ConfirmModal from '../../components/modals/ConfirmModal.jsx';
 import ShareLessonModal from '../../components/modals/ShareLessonModal.jsx';
 import CoursesModal from './CoursesModal.jsx';
+import LessonPreviewPane from './LessonPreviewPane.jsx';
 import { converseStream, extractLessonMarkdown } from '../../../js/orchestrator.js';
 import { parseLessonPrompt } from '../../../js/lessonOwner.js';
-import { parseResponse, cleanStream } from '../../lib/lessonCreationEngine.js';
+import { parseResponse, cleanStream, buildConversationText } from '../../lib/lessonCreationEngine.js';
 import { useStreamedText } from '../../hooks/useStreamedText.js';
 import { useTitleNotification } from '../../hooks/useTitleNotification.js';
 import { MSG_TYPES } from '../../lib/constants.js';
@@ -34,7 +35,7 @@ export default function AdminLessons() {
   const [lessons, setLessons] = useState([]);
   const [courses, setCourses] = useState([]);
   const [coursesOpen, setCoursesOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // { lessonId, conversation, readiness, needsAgentReply, isDraft, initialCourse }
+  const [editing, setEditing] = useState(null); // { lessonId, conversation, readiness, needsAgentReply, isDraft, initialCourse, markdown }
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmModal, setConfirmModal] = useState(null);
@@ -76,15 +77,16 @@ export default function AdminLessons() {
       // Legacy records with status='draft' but stored markdown are treated as private.
       const isDraft = data.status === 'draft' && !data.markdown;
       const initialCourse = data.course || null;
+      const markdown = data.markdown || '';
       if (data.conversation?.length) {
         // Resume the creation conversation (drafts always land here)
-        setEditing({ lessonId, conversation: data.conversation, readiness: data.readiness ?? (isDraft ? 1 : 8), isDraft, initialCourse });
+        setEditing({ lessonId, conversation: data.conversation, readiness: data.readiness ?? (isDraft ? 1 : 8), isDraft, initialCourse, markdown });
       } else {
         // No conversation — seed one with the existing markdown so the agent has context
         const seedConversation = [
           { role: 'user', content: `I want to edit an existing lesson. Here is the current lesson markdown:\n\n${data.markdown}\n\nWhat would you like to know about the changes I want to make?`, msgType: MSG_TYPES.USER },
         ];
-        setEditing({ lessonId, conversation: seedConversation, readiness: data.readiness ?? 8, needsAgentReply: true, isDraft, initialCourse });
+        setEditing({ lessonId, conversation: seedConversation, readiness: data.readiness ?? 8, needsAgentReply: true, isDraft, initialCourse, markdown });
       }
     } catch (e) { setMessage({ text: e.message, type: 'error' }); }
   }
@@ -157,6 +159,7 @@ export default function AdminLessons() {
         initialReadiness={editing.readiness}
         needsAgentReply={editing.needsAgentReply}
         initialCourse={editing.initialCourse}
+        initialMarkdown={editing.markdown}
         onSave={async (name, markdown, conversation, readiness) => {
           // null name + markdown = the editor decided there was nothing new
           // to extract (e.g. admin only changed the course dropdown). Skip
@@ -315,7 +318,7 @@ export default function AdminLessons() {
 
 // -- Lesson creation/editing view with AI Chat --------------------------------
 
-function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft, initialMessages, initialReadiness, needsAgentReply, initialCourse }) {
+function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft, initialMessages, initialReadiness, needsAgentReply, initialCourse, initialMarkdown }) {
   // A view is in "create" mode when it's driving a fresh or in-progress draft.
   // It's in "edit" mode when finalizing a non-draft lesson's content.
   const isCreate = !!isDraft;
@@ -329,6 +332,24 @@ function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft,
   const [key, setKey] = useState(0); // increment to restart conversation
   const [courses, setCourses] = useState([]);
   const [course, setCourse] = useState(initialCourse || '');
+
+  // Markdown preview pane. Refreshed manually via the lesson-extractor agent;
+  // never persisted until the admin clicks Create/Update Lesson.
+  const [previewVisible, setPreviewVisible] = useState(true);
+  const [previewMarkdown, setPreviewMarkdown] = useState(initialMarkdown || '');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState('');
+  // Number of chat messages the current preview reflects. In edit mode the
+  // saved markdown was extracted from the resumed conversation, so it starts
+  // in sync; a fresh draft has no markdown yet.
+  const [previewSyncedAt, setPreviewSyncedAt] = useState(
+    initialMarkdown ? (initialMessages?.length || 0) : 0
+  );
+  const showPreviewRef = useRef(null);
+  const hidePreviewRef = useRef(null);
+  // Pending focus target after a visibility toggle (the button to focus once
+  // it has mounted). Cleared by the effect below.
+  const pendingPreviewFocus = useRef(null);
 
   // Load course list once on mount so the dropdown can populate.
   useEffect(() => {
@@ -515,8 +536,7 @@ function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft,
     }
     setBusy('creating');
     try {
-      const conversationText = chatMessages.map(m => `${m.role === 'user' ? 'User' : 'Agent'}: ${m.content}`).join('\n\n');
-      const md = await extractLessonMarkdown(conversationText);
+      const md = await extractLessonMarkdown(buildConversationText(chatMessages));
       const lesson = parseLessonPrompt(lessonId, md);
 
       if (!lesson.name || !lesson.exemplar || !lesson.learningObjectives.length) {
@@ -524,6 +544,10 @@ function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft,
         setBusy('');
         return;
       }
+
+      // Keep the preview in sync with what we're about to save.
+      setPreviewMarkdown(md);
+      setPreviewSyncedAt(chatMessages.length);
 
       // Save conversation alongside the markdown so it can be resumed later
       const conversation = chatMessages.map(m => ({ role: m.role, content: m.content, msgType: m.msgType }));
@@ -535,6 +559,45 @@ function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft,
   }
 
   const isBusy = !!busy;
+  const previewStale = !!previewMarkdown && chatMessages.length > previewSyncedAt;
+
+  // Refresh the markdown preview by re-running the lesson-extractor agent.
+  // Runs independently of the chat — never sets `busy`.
+  async function handleRefreshPreview() {
+    if (chatMessages.length === 0) {
+      setPreviewError('Start the conversation first, then refresh.');
+      return;
+    }
+    setPreviewError('');
+    setPreviewLoading(true);
+    try {
+      const md = await extractLessonMarkdown(buildConversationText(chatMessages));
+      setPreviewMarkdown(md);
+      setPreviewSyncedAt(chatMessages.length);
+    } catch (e) {
+      setPreviewError(e.message || 'Failed to generate preview.');
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function hidePreview() {
+    setPreviewVisible(false);
+    pendingPreviewFocus.current = 'show';
+  }
+  function showPreview() {
+    setPreviewVisible(true);
+    pendingPreviewFocus.current = 'hide';
+  }
+  // Move keyboard focus to the surviving toggle after a show/hide so focus is
+  // never lost when the clicked button unmounts.
+  useEffect(() => {
+    const target = pendingPreviewFocus.current;
+    if (!target) return;
+    pendingPreviewFocus.current = null;
+    const ref = target === 'show' ? showPreviewRef : hidePreviewRef;
+    ref.current?.focus();
+  }, [previewVisible]);
 
   const renderMessage = (msg, idx) => {
     if (msg.msgType === MSG_TYPES.USER) return <UserMessage key={idx} content={msg.content} />;
@@ -546,6 +609,18 @@ function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft,
       <div className="flex items-center gap-3 mb-4">
         <Button variant="ghost" size="sm" onClick={onCancel} aria-label="Back to lessons">&larr; Back</Button>
         <h1 className="text-2xl font-bold">{isCreate ? 'New Lesson' : 'Edit Lesson'}</h1>
+        {!previewVisible && (
+          <Button
+            ref={showPreviewRef}
+            variant="outline"
+            size="sm"
+            className="ml-auto"
+            onClick={showPreview}
+            aria-expanded={false}
+          >
+            Show preview
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -619,25 +694,46 @@ function NewLessonView({ onSave, onCancel, onError: _onError, lessonId, isDraft,
         </div>
       )}
 
-      {/* Chat + compose in a single container */}
-      <div className="rounded-2xl bg-muted/40 border border-border p-4">
-        <div className="mb-3">
-          <ChatArea announcement={srAnnouncement}>
-            {chatMessages.map(renderMessage)}
-            {displayText != null && displayText.length > 0 && (
-              <AssistantMessage content={displayText} streaming />
-            )}
-            {busy === 'starting' && !displayText && <ThinkingSpinner text="Starting..." />}
-            {busy === 'creating' && <ThinkingSpinner text="Generating lesson..." />}
-            {busy === 'qa' && !displayText && <ThinkingSpinner />}
-          </ChatArea>
+      {/* Chat (left) + markdown preview (right). Stacks vertically below `lg`. */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        <div className={previewVisible ? 'lg:w-3/5 min-w-0' : 'w-full min-w-0'}>
+          {/* Chat + compose in a single container */}
+          <div className="rounded-2xl bg-muted/40 border border-border p-4">
+            <div className="mb-3">
+              <ChatArea announcement={srAnnouncement}>
+                {chatMessages.map(renderMessage)}
+                {displayText != null && displayText.length > 0 && (
+                  <AssistantMessage content={displayText} streaming />
+                )}
+                {busy === 'starting' && !displayText && <ThinkingSpinner text="Starting..." />}
+                {busy === 'creating' && <ThinkingSpinner text="Generating lesson..." />}
+                {busy === 'qa' && !displayText && <ThinkingSpinner />}
+              </ChatArea>
+            </div>
+
+            <ComposeBar
+              placeholder="Describe what you want to teach..."
+              onSend={handleSend}
+              disabled={isBusy}
+            />
+          </div>
         </div>
 
-        <ComposeBar
-          placeholder="Describe what you want to teach..."
-          onSend={handleSend}
-          disabled={isBusy}
-        />
+        {previewVisible && (
+          <div className="lg:w-2/5 min-w-0">
+            <LessonPreviewPane
+              markdown={previewMarkdown}
+              loading={previewLoading}
+              error={previewError}
+              stale={previewStale}
+              isCreate={isCreate}
+              refreshDisabled={previewLoading || isBusy}
+              onRefresh={handleRefreshPreview}
+              onHide={hidePreview}
+              hideButtonRef={hidePreviewRef}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
