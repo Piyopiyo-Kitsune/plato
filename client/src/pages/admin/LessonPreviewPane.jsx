@@ -18,6 +18,10 @@ export default function LessonPreviewPane({
 }) {
   const hasContent = !!markdown?.trim();
   const saveLabel = isCreate ? 'Create Lesson' : 'Update Lesson';
+  // Before the first extraction there is nothing to refresh — it's a generate.
+  const refreshLabel = loading
+    ? (hasContent ? 'Refreshing…' : 'Generating…')
+    : (hasContent ? 'Refresh preview' : 'Generate preview');
 
   return (
     <aside
@@ -33,7 +37,7 @@ export default function LessonPreviewPane({
           onClick={onRefresh}
           disabled={refreshDisabled}
         >
-          {loading ? 'Refreshing…' : 'Refresh preview'}
+          {refreshLabel}
         </Button>
       </div>
 
@@ -70,7 +74,7 @@ export default function LessonPreviewPane({
         ) : (
           <div className="text-sm text-muted-foreground py-8 text-center">
             No preview yet. Keep chatting with the editor, then click
-            &ldquo;Refresh preview&rdquo; to see the generated lesson markdown.
+            &ldquo;Generate preview&rdquo; to see the generated lesson markdown.
           </div>
         )}
       </div>
