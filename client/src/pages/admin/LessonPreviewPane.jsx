@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { renderMd } from '../../lib/helpers.js';
 
@@ -22,6 +23,21 @@ export default function LessonPreviewPane({
   const refreshLabel = loading
     ? (hasContent ? 'Refreshing…' : 'Generating…')
     : (hasContent ? 'Refresh preview' : 'Generate preview');
+  const showStaleHint = stale && !loading;
+
+  // Announce refresh start/finish to screen readers. Errors are announced by
+  // the role="alert" region below, so the status region stays quiet on
+  // failure to avoid a double announcement.
+  const [announcement, setAnnouncement] = useState('');
+  const wasLoading = useRef(loading);
+  useEffect(() => {
+    if (loading && !wasLoading.current) {
+      setAnnouncement(hasContent ? 'Refreshing lesson preview' : 'Generating lesson preview');
+    } else if (!loading && wasLoading.current) {
+      setAnnouncement(error ? '' : 'Lesson preview updated');
+    }
+    wasLoading.current = loading;
+  }, [loading, error, hasContent]);
 
   return (
     <aside
@@ -36,14 +52,17 @@ export default function LessonPreviewPane({
           className="shrink-0"
           onClick={onRefresh}
           disabled={refreshDisabled}
+          aria-describedby={showStaleHint ? 'lesson-preview-stale-hint' : undefined}
         >
           {refreshLabel}
         </Button>
       </div>
 
-      {/* Staleness hint — the conversation has advanced past the last refresh. */}
-      {stale && !loading && (
-        <p className="text-xs text-muted-foreground mb-2">
+      {/* Staleness hint — the conversation has advanced past the last refresh.
+          Linked to the refresh button via aria-describedby so a screen-reader
+          user hears why a refresh is worthwhile when the button is focused. */}
+      {showStaleHint && (
+        <p id="lesson-preview-stale-hint" className="text-xs text-muted-foreground mb-2">
           Preview may be outdated — refresh to update.
         </p>
       )}
@@ -58,12 +77,17 @@ export default function LessonPreviewPane({
 
       {/* Screen-reader announcements for async refresh outcomes. */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
-        {loading ? 'Refreshing preview' : error ? `Preview error: ${error}` : ''}
+        {announcement}
       </div>
 
       <div className="flex-1 overflow-auto">
         {error ? (
-          <div role="alert" className="text-sm text-destructive">{error}</div>
+          <div
+            role="alert"
+            className="rounded-lg bg-destructive/10 text-destructive px-4 py-3 text-sm"
+          >
+            {error}
+          </div>
         ) : loading ? (
           <div className="text-sm text-muted-foreground">Generating preview…</div>
         ) : hasContent ? (
@@ -72,7 +96,7 @@ export default function LessonPreviewPane({
             dangerouslySetInnerHTML={{ __html: renderMd(markdown) }}
           />
         ) : (
-          <div className="text-sm text-muted-foreground py-8 text-center">
+          <div className="text-sm text-muted-foreground py-12 text-center">
             No preview yet. Keep chatting with the editor, then click
             &ldquo;Generate preview&rdquo; to see the generated lesson markdown.
           </div>
