@@ -8,19 +8,23 @@
  * on the way in keeps every screenshot record comfortably under the limit.
  */
 
-// Target size for the encoded data URL body. Well under DynamoDB's 400 KB
-// item limit, leaving headroom for the record's other attributes.
-const DEFAULT_MAX_BYTES = 350 * 1024;
+// Target size for the base64-encoded data URL string. DynamoDB's 400 KB item
+// limit applies to the stored JSON (including the base64 string + record
+// overhead), not the decoded bytes. A base64 string is 33% larger than its
+// decoded size (4 chars encode 3 bytes), so we target well under 400 KB to
+// leave headroom for the `screenshot:*` key and sync-data metadata.
+const DEFAULT_MAX_BYTES = 300 * 1024;
 
 /**
- * Estimate the decoded byte size of a base64 data URL from its string length.
- * Base64 encodes 3 bytes per 4 characters. Pure — safe to unit test.
+ * Estimate the JSON-serialized size of a data URL for DynamoDB storage.
+ * DynamoDB's 400 KB limit applies to the item's JSON representation, which
+ * includes the data URL string (the base64 body + "data:image/...;base64,"
+ * prefix) plus record overhead (~50 bytes for the sync-data key, version, etc.).
+ * Returns the data URL's string length as the size estimate.
  */
 export function estimateDataUrlBytes(dataUrl) {
   if (typeof dataUrl !== 'string') return 0;
-  const comma = dataUrl.indexOf(',');
-  const body = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
-  return Math.floor((body.length * 3) / 4);
+  return dataUrl.length;
 }
 
 function loadImage(src) {
