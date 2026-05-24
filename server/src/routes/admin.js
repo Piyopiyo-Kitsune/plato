@@ -1055,14 +1055,13 @@ admin.get('/v1/admin/stats/lessons', async (c) => {
 });
 
 // GET /v1/admin/users/:userId/stats — per-user activity metrics for the
-// admin user-detail panel (issue #136). Computed on demand from sync-data +
-// audit-log; no precomputation. Window is the last `days` calendar days
-// (default 30) in UTC.
+// admin user-detail panel (issue #136). Computed on demand from sync-data;
+// no precomputation. Window is the last `days` calendar days (default 30) in UTC.
 //
 // Duration is exchange-based (activitiesCompleted × MINS_PER_EXCHANGE) to
 // match `/v1/admin/stats/lessons` and AdminHome — wall-clock minutes inflate
-// from multi-session lessons. Logins are read from the audit-log
-// (`user_login` events, scan-with-filter — fine at current scale).
+// from multi-session lessons. `lastActiveAt` is the user's most recent
+// activity timestamp (updated on login + refresh, per the denormalization policy).
 admin.get('/v1/admin/users/:userId/stats', async (c) => {
   const userId = c.req.param('userId');
   const user = await db.getUserById(userId);
@@ -1106,13 +1105,6 @@ admin.get('/v1/admin/users/:userId/stats', async (c) => {
     });
   }
 
-  // Logins from audit-log
-  const auditEntries = await db.listAuditLogsForUser(userId, sinceIso);
-  let loginsInWindow = 0;
-  for (const entry of auditEntries) {
-    if (entry.action === 'user_login') loginsInWindow++;
-  }
-
   // Percentiles over all completed lessons (career stats, not window-scoped)
   const sorted = lessonDurations.map((l) => l.minutes).sort((a, b) => a - b);
   const pct = (p) => {
@@ -1128,7 +1120,7 @@ admin.get('/v1/admin/users/:userId/stats', async (c) => {
     windowDays: days,
     lessonsCompleted,
     lessonsAvailable: countLessonsAvailableTo(userId, systemItems),
-    loginsInWindow,
+    lastActiveAt: user.lastActiveAt || null,
     completionMinutesP50: pct(50),
     completionMinutesP90: pct(90),
     lessonDurations,

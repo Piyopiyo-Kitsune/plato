@@ -42,10 +42,28 @@ export default function UserStatsPanel({ userId }) {
 
   const {
     lessonsCompleted, lessonsAvailable,
-    loginsInWindow,
+    lastActiveAt,
     completionMinutesP50, completionMinutesP90,
     lessonDurations = [], windowDays,
   } = stats;
+
+  // Format lastActiveAt as relative time
+  const formatRelativeTime = (isoString) => {
+    if (!isoString) return 'Never';
+    const then = new Date(isoString);
+    const now = new Date();
+    const diffMs = now - then;
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+    }
+    const months = Math.floor(diffDays / 30);
+    return months === 1 ? '1 month ago' : `${months} months ago`;
+  };
 
   return (
     <Card>
@@ -61,7 +79,7 @@ export default function UserStatsPanel({ userId }) {
               label="Lessons completed"
             />
           </div>
-          <StatTile label={`Logins (${windowDays}d)`} value={loginsInWindow} />
+          <StatTile label="Last active" value={formatRelativeTime(lastActiveAt)} />
           <StatTile
             label="Median completion time"
             value={completionMinutesP50 != null ? `${completionMinutesP50} min` : '—'}
