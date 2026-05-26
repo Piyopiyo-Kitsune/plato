@@ -244,12 +244,25 @@ export default function ComposeBar({
         {links.length > 0 && (
           <div className="m-2 flex flex-wrap gap-2">
             {links.map((link, idx) => (
-              <div key={idx} className="relative inline-flex max-w-full items-center gap-1.5 rounded-md border border-input bg-muted py-1 pl-2 pr-6 text-xs">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted-foreground">
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                </svg>
-                <span className="truncate max-w-[12rem]" title={link.url}>{link.title}</span>
-                <span className="text-muted-foreground shrink-0">{hostLabel(link.url)}</span>
+              <div key={idx} className="relative inline-flex max-w-full">
+                {/* The chip body is a focusable link so keyboard/SR users can
+                    reach it, hear the full URL (aria-label), and open it to
+                    verify before deciding whether to remove it — the remove
+                    button alone left the URL inaccessible without a mouse. */}
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.url}
+                  aria-label={`Attached link: ${link.title} — ${link.url} — opens in a new tab`}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-input bg-muted py-1 pl-2 pr-6 text-xs hover:bg-muted/70"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted-foreground">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                  <span className="truncate max-w-[12rem]" aria-hidden="true">{link.title}</span>
+                  <span className="text-muted-foreground shrink-0" aria-hidden="true">{hostLabel(link.url)}</span>
+                </a>
                 <Button
                   variant="secondary"
                   size="icon-xs"
