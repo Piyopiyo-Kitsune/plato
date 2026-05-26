@@ -35,8 +35,19 @@ describe('extractReadable', () => {
   });
 
   it('decodes entities and returns trimmed text', () => {
-    const out = _internals.htmlToText('<p>Tom &amp; Jerry &lt;3</p>');
+    const out = _internals.domToText('<p>Tom &amp; Jerry &lt;3</p>');
     assert.equal(out, 'Tom & Jerry <3');
+  });
+
+  it('drops scripts and never emits HTML markup (text is read from the DOM, not regex-stripped)', () => {
+    // The output is plain text — read via textContent — so no tag or event
+    // handler can survive as functional markup, even from malformed input.
+    assert.equal(_internals.domToText('<p>safe</p><script>alert(1)</script>'), 'safe');
+
+    const injected = _internals.domToText('<p>hi</p><img src=x onerror="alert(1)"><b>bold</b>');
+    assert.ok(!/[<>]/.test(injected), 'no angle-bracket markup in the output');
+    assert.ok(!/onerror/i.test(injected), 'no event-handler attribute leaks through');
+    assert.ok(injected.includes('hi') && injected.includes('bold'), 'visible text is kept');
   });
 });
 

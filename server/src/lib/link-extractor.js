@@ -19,33 +19,25 @@ const MAX_REDIRECTS = 5;
 const USER_AGENT = 'platoLinkFetcher/1.0 (+https://github.com/1111philo/plato)';
 const ALLOWED_CONTENT_TYPES = ['text/html', 'application/xhtml+xml', 'text/plain'];
 
-const ENTITIES = {
-  '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'", '&nbsp;': ' ',
-};
+const BLOCK_SELECTOR = 'p,div,li,h1,h2,h3,h4,h5,h6,tr,blockquote,pre,section,article,header,footer,ul,ol,table';
 
-function decodeEntities(s) {
-  return String(s)
-    .replace(/&(?:amp|lt|gt|quot|apos|nbsp);/g, (m) => ENTITIES[m])
-    .replace(/&#(\d+);/g, (_, n) => safeCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => safeCodePoint(parseInt(n, 16)));
-}
-
-function safeCodePoint(n) {
-  try { return String.fromCodePoint(n); } catch { return ''; }
-}
-
-// Convert an HTML fragment to plain text while preserving block boundaries.
-// (Readability's own `textContent` drops them — e.g. "<h1>Hi</h1><p>Yo</p>"
-// becomes "HiYo" — which mangles words for the model.)
-function htmlToText(html) {
-  return decodeEntities(
-    String(html)
-      .replace(/<(script|style|noscript|template|svg)[\s\S]*?<\/\1>/gi, '')
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<li[^>]*>/gi, '\n• ')
-      .replace(/<\/(p|div|li|h[1-6]|tr|blockquote|pre|section|article|header|footer|ul|ol|table)>/gi, '\n')
-      .replace(/[<>]/g, '')
-  )
+// Convert an HTML fragment to plain text via the DOM, preserving block
+// boundaries. We read text from parsed nodes (`textContent`) rather than
+// stripping tags from the string with regex: regex tag-removal is provably
+// incomplete (e.g. `<scr<script>ipt>`) and `textContent` also decodes HTML
+// entities for free. Block boundaries matter because Readability's own
+// `textContent` fuses elements — "<h1>Hi</h1><p>Yo</p>" → "HiYo" — which
+// mangles words for the model. Input is serialized DOM (Readability output or
+// an element's innerHTML), so wrapping it in a body parses cleanly.
+function domToText(htmlFragment) {
+  const { document } = parseHTML(`<!DOCTYPE html><html><body>${htmlFragment || ''}</body></html>`);
+  const body = document.body;
+  if (!body) return '';
+  body.querySelectorAll('script,style,noscript,template,svg').forEach((n) => n.remove());
+  body.querySelectorAll('br').forEach((el) => el.replaceWith('\n'));
+  body.querySelectorAll('li').forEach((el) => el.prepend('• '));
+  body.querySelectorAll(BLOCK_SELECTOR).forEach((el) => el.append('\n'));
+  return (body.textContent || '')
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .replace(/[ \t]{2,}/g, ' ')
@@ -68,7 +60,7 @@ export function extractReadable(html) {
     if (article && article.content) {
       title = article.title || null;
       siteName = article.siteName || null;
-      text = htmlToText(article.content);
+      text = domToText(article.content);
     }
   } catch {
     // fall through to the whole-body fallback
@@ -76,9 +68,8 @@ export function extractReadable(html) {
 
   if (!text.trim()) {
     const { document } = parseHTML(html); // fresh parse — the first was mutated
-    document.querySelectorAll('script,style,noscript,template,svg').forEach((n) => n.remove());
     title = title || document.querySelector('title')?.textContent?.trim() || null;
-    text = htmlToText(document.body?.innerHTML || '');
+    text = domToText(document.body?.innerHTML || '');
   }
 
   return { title, siteName, text: text.trim() };
@@ -169,4 +160,4 @@ export async function fetchUrlContent(url) {
   }
 }
 
-export const _internals = { htmlToText, MAX_TEXT_CHARS };
+export const _internals = { domToText, MAX_TEXT_CHARS };
