@@ -8,6 +8,7 @@ import admin, { recomputeAndCacheLessonStats } from './routes/admin.js';
 import sync from './routes/sync.js';
 import ai from './routes/ai.js';
 import content from './routes/content.js';
+import links from './routes/links.js';
 import app from './routes/app.js';
 import db from './lib/db.js';
 import { generateUserId } from './lib/crypto.js';
@@ -79,6 +80,7 @@ server.route('/', admin);
 server.route('/', sync);
 server.route('/', ai);
 server.route('/', content);
+server.route('/', links);
 
 // Plugin catch-all + legacy shim. See server/src/lib/plugins/dispatcher.js for
 // the handler logic. Registered BEFORE `app` because app.js has a global SPA

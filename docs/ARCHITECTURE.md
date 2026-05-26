@@ -83,6 +83,44 @@ is its own `screenshot:<key>` record, and the message stores only
   presence) — **never the `lesson` object identity**, which changes on every tab
   refocus and used to re-run the effect and reset the conversation mid-lesson.
 
+## Link attachments
+
+A learner can attach a web page to a coach message (a dedicated link button in
+`ComposeBar`, alongside the image button). The page is fetched and read
+**server-side** — the browser can't fetch arbitrary cross-origin pages (CORS),
+and doing it server-side is also where the SSRF defense lives.
+
+- **Endpoint:** `POST /v1/links/fetch` (`server/src/routes/links.js`, on the
+  buffered API function). `client/src/lib/links.js`'s `fetchLinkContent` calls
+  it when the learner adds a link, so the chip shows the real title immediately.
+- **Extraction:** `server/src/lib/link-extractor.js` — `fetchUrlContent(url)`
+  does a plain fetch; `extractReadable(html)` runs `@mozilla/readability` over a
+  `linkedom` DOM and converts the cleaned article HTML to text preserving block
+  boundaries (Readability's own `textContent` fuses words across elements).
+  Falls back to a whole-body strip for non-article pages. This is the
+  **pluggable seam**: to reach true "as a human sees it" fidelity for
+  JS-rendered SPAs later, replace only the fetch step with a headless browser or
+  a reader service — `extractReadable` and the route are unchanged. **Known v1
+  gap:** pure client-rendered SPAs return little text (documented, not solved).
+- **SSRF defense** (`server/src/lib/url-guard.js`) — the headline risk, since
+  the server fetches user-supplied URLs from inside AWS. `assertSafeUrl` allows
+  only http/https, no embedded credentials, ports 80/443/8080. `assertSafeHost`
+  resolves the host via DNS and rejects if **any** address is
+  loopback/private/link-local/reserved — including `169.254.169.254` (the
+  instance metadata endpoint) and IPv4-mapped IPv6. Redirects are followed
+  **manually** (≤5 hops) and every hop is re-validated, so a public URL can't
+  bounce to an internal one. Plus a 10 s timeout, a 3 MB download cap, a
+  content-type allowlist, and a ~50 k char truncation on the extracted text.
+- **Recall is this-turn-only — image parity.** The fetched page text is injected
+  into the coach call on the attach turn as a text content block
+  (`buildUserParts` in `lessonEngine.js`: `[Attached link: …]\nURL: …\n\n<text>`,
+  ordered text → links → images). It is **not** persisted and **not** re-sent on
+  later turns (which see a `[link]` placeholder, exactly like images). The
+  persisted message keeps only `metadata.links: [{ url, title }]` — tiny, so no
+  400 KB risk, no new sync-data record type, no hydration, and no cleanup. Link
+  chips render directly from that persisted metadata on resume. The coach prompt
+  (`client/prompts/coach.md`) documents links as a supported input.
+
 ## Lessons: visibility, drafts, courses, classroom
 
 ### Visibility
