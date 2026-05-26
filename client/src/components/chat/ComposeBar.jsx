@@ -1,10 +1,12 @@
 import { useState, useRef, useId, useEffect } from 'react';
 import { useAutoResize } from '../../hooks/useAutoResize.js';
 import { compressImageDataUrl } from '../../lib/imageCompression.js';
+import { fetchLinkContent } from '../../lib/links.js';
 import { Button } from '@/components/ui/button';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Bedrock 5 MB limit
+const MAX_LINKS = 3;
 
 function readImageAsDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -15,30 +17,54 @@ function readImageAsDataUrl(file) {
   });
 }
 
+// "https://www.example.com/path" → "example.com" for compact chip labels.
+function hostLabel(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+}
+
 export default function ComposeBar({
   placeholder = 'Ask a question...',
   onSend,
   disabled = false,
   allowImages = false,
+  allowLinks = false,
   elevated = false,
   text: textProp,
   onTextChange,
   images: imagesProp,
   onImagesChange,
+  links: linksProp,
+  onLinksChange,
 }) {
   const [localText, setLocalText] = useState('');
   const [localImages, setLocalImages] = useState([]); // array of { dataUrl, name }
+  const [localLinks, setLocalLinks] = useState([]); // array of { url, title, siteName, text }
   const [loadingImages, setLoadingImages] = useState(false);
   const text = textProp !== undefined ? textProp : localText;
   const setText = onTextChange || setLocalText;
   const images = imagesProp !== undefined ? imagesProp : localImages;
   const setImages = onImagesChange || setLocalImages;
+  const links = linksProp !== undefined ? linksProp : localLinks;
+  const setLinks = onLinksChange || setLocalLinks;
   const inputRef = useRef(null);
   const fileRef = useRef(null);
+  const linkInputRef = useRef(null);
+  const linkButtonRef = useRef(null);
   const handleResize = useAutoResize();
   const inputId = useId();
   const statusId = useId();
+  const linkInputId = useId();
   const [loadingCount, setLoadingCount] = useState(0);
+
+  // Link-attach UI state.
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkValue, setLinkValue] = useState('');
+  const [fetchingLink, setFetchingLink] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
+  useEffect(() => {
+    if (linkOpen) linkInputRef.current?.focus();
+  }, [linkOpen]);
 
   // The lesson chat mounts two ComposeBar instances — an inline one and a
   // fixed-overlay one — and a window-scroll listener swaps which is visible
@@ -58,11 +84,13 @@ export default function ComposeBar({
 
   const send = () => {
     const val = text.trim();
-    if ((!val && images.length === 0) || disabled || loadingImages) return;
+    if ((!val && images.length === 0 && links.length === 0) || disabled || loadingImages || fetchingLink) return;
     const imageDataUrls = images.length > 0 ? images.map(i => i.dataUrl) : null;
-    const payload = { text: val || null, imageDataUrls };
+    const linkPayload = links.length > 0 ? links.map(l => ({ url: l.url, title: l.title, text: l.text })) : null;
+    const payload = { text: val || null, imageDataUrls, links: linkPayload };
     setText('');
     setImages([]);
+    setLinks([]);
     if (inputRef.current) { inputRef.current.style.height = 'auto'; inputRef.current.style.overflowY = 'hidden'; }
     onSend(payload);
   };
@@ -137,7 +165,60 @@ export default function ComposeBar({
     setImages(images.filter((_, i) => i !== idx));
   };
 
-  const hasContent = text.trim() || images.length > 0;
+  const openLinkInput = () => {
+    setLinkError('');
+    setLinkValue('');
+    setLinkOpen(true);
+  };
+
+  // Close the link input and move focus to a sensible place so keyboard and
+  // screen-reader users aren't dropped on document.body. After a successful
+  // add we send focus to the message textarea (continue composing); on cancel
+  // we return it to the link toggle button (the trigger), falling back to the
+  // textarea if that button is now disabled (e.g. max links reached).
+  const closeLinkInput = (focusTarget = 'button') => {
+    setLinkOpen(false);
+    setLinkValue('');
+    setLinkError('');
+    requestAnimationFrame(() => {
+      if (focusTarget === 'button' && linkButtonRef.current && !linkButtonRef.current.disabled) {
+        linkButtonRef.current.focus();
+      } else {
+        inputRef.current?.focus();
+      }
+    });
+  };
+
+  const addLink = async () => {
+    const raw = linkValue.trim();
+    if (!raw || fetchingLink) return;
+    if (links.length >= MAX_LINKS) { setLinkError(`You can attach up to ${MAX_LINKS} links.`); return; }
+    // Be forgiving about a missing scheme — the server validates for real.
+    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    setFetchingLink(true);
+    setLinkError('');
+    try {
+      const result = await fetchLinkContent(url);
+      setLinks([...links, {
+        url: result.finalUrl || result.url || url,
+        title: result.title || hostLabel(url),
+        siteName: result.siteName || null,
+        text: result.text || '',
+      }].slice(0, MAX_LINKS));
+      closeLinkInput('textarea');
+    } catch (e) {
+      setLinkError(e.message || "Couldn't load that link.");
+    } finally {
+      setFetchingLink(false);
+    }
+  };
+
+  const removeLink = (idx) => {
+    setLinks(links.filter((_, i) => i !== idx));
+  };
+
+  const hasContent = text.trim() || images.length > 0 || links.length > 0;
+  const busy = loadingImages || fetchingLink;
 
   return (
     <div className="px-4 pb-4 pt-2">
@@ -160,6 +241,41 @@ export default function ComposeBar({
             ))}
           </div>
         )}
+        {links.length > 0 && (
+          <div className="m-2 flex flex-wrap gap-2">
+            {links.map((link, idx) => (
+              <div key={idx} className="relative inline-flex max-w-full">
+                {/* The chip body is a focusable link so keyboard/SR users can
+                    reach it, hear the full URL (aria-label), and open it to
+                    verify before deciding whether to remove it — the remove
+                    button alone left the URL inaccessible without a mouse. */}
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={link.url}
+                  aria-label={`Attached link: ${link.title} — ${link.url} — opens in a new tab`}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-input bg-muted py-1 pl-2 pr-6 text-xs hover:bg-muted/70"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 text-muted-foreground">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                  <span className="truncate max-w-[12rem]" aria-hidden="true">{link.title}</span>
+                  <span className="text-muted-foreground shrink-0" aria-hidden="true">{hostLabel(link.url)}</span>
+                </a>
+                <Button
+                  variant="secondary"
+                  size="icon-xs"
+                  className="absolute -top-1.5 -right-1.5 rounded-full"
+                  onClick={() => removeLink(idx)}
+                  aria-label={`Remove link ${link.title}`}
+                >
+                  &times;
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
         <label htmlFor={inputId} className="sr-only">Your message</label>
         <textarea
           ref={inputRef}
@@ -175,6 +291,39 @@ export default function ComposeBar({
           onPaste={handlePaste}
           disabled={disabled}
         />
+        {allowLinks && linkOpen && (
+          <div className="mx-2 mb-2 flex flex-col gap-1" role="group" aria-label="Attach a link">
+            <div className="flex items-center gap-2">
+              <label htmlFor={linkInputId} className="sr-only">Link URL</label>
+              <input
+                ref={linkInputRef}
+                id={linkInputId}
+                type="url"
+                inputMode="url"
+                placeholder="Paste a link (https://…)"
+                value={linkValue}
+                onChange={(e) => setLinkValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); addLink(); }
+                  if (e.key === 'Escape') { e.preventDefault(); closeLinkInput('button'); }
+                }}
+                disabled={fetchingLink}
+                aria-describedby={linkError ? `${linkInputId}-err` : undefined}
+                aria-invalid={linkError ? true : undefined}
+                className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
+              />
+              <Button variant="default" size="sm" onClick={addLink} disabled={!linkValue.trim() || fetchingLink}>
+                {fetchingLink ? 'Adding…' : 'Add'}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => closeLinkInput('button')} disabled={fetchingLink}>
+                Cancel
+              </Button>
+            </div>
+            {linkError && (
+              <p id={`${linkInputId}-err`} className="text-xs text-destructive" role="alert">{linkError}</p>
+            )}
+          </div>
+        )}
         <div className="flex items-center gap-1 px-2 pb-2">
           {allowImages && (
             <>
@@ -200,12 +349,31 @@ export default function ComposeBar({
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
               </Button>
-              {/* Persistent live region — keeps the same node mounted so transitions
-                  (e.g. "Loading 3 images…" → cleared) are announced reliably. */}
-              <span id={statusId} className="text-xs text-muted-foreground" role="status" aria-live="polite">
-                {loadingImages ? `Loading ${loadingCount} image${loadingCount === 1 ? '' : 's'}…` : ''}
-              </span>
             </>
+          )}
+          {allowLinks && (
+            <Button
+              ref={linkButtonRef}
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => (linkOpen ? closeLinkInput('button') : openLinkInput())}
+              disabled={disabled || links.length >= MAX_LINKS}
+              aria-label={links.length >= MAX_LINKS
+                ? `Maximum ${MAX_LINKS} links attached`
+                : 'Attach a link'}
+              aria-expanded={linkOpen}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+            </Button>
+          )}
+          {/* Persistent live region — keeps the same node mounted so transitions
+              (e.g. "Loading 3 images…" → cleared) are announced reliably. */}
+          {(allowImages || allowLinks) && (
+            <span id={statusId} className="text-xs text-muted-foreground" role="status" aria-live="polite">
+              {loadingImages ? `Loading ${loadingCount} image${loadingCount === 1 ? '' : 's'}…` : (fetchingLink ? 'Fetching link…' : '')}
+            </span>
           )}
           <div className="flex-1" />
           <Button
@@ -213,9 +381,9 @@ export default function ComposeBar({
             size="icon-sm"
             className={`transition-opacity ${hasContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
             aria-label="Send"
-            aria-describedby={allowImages && loadingImages ? statusId : undefined}
+            aria-describedby={(allowImages || allowLinks) && busy ? statusId : undefined}
             onClick={send}
-            disabled={disabled || !hasContent || loadingImages}
+            disabled={disabled || !hasContent || busy}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <line x1="12" y1="19" x2="12" y2="5" />

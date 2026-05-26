@@ -193,15 +193,46 @@ export function normalizeImageDataUrls(input) {
 }
 
 /**
+ * Build the Anthropic content blocks for a learner turn: the text, then any
+ * attached links, then images. A link's fetched page text is injected inline
+ * so the coach can read it on this turn — image parity, so it is NOT re-sent
+ * on later turns (the persisted message keeps only `{ url, title }`). Exported
+ * for unit testing.
+ * @param {object[]} links - [{ url, title, text }]
+ */
+export function buildUserParts(text, imageDataUrls = [], links = []) {
+  const parts = [];
+  if (text) parts.push({ type: 'text', text });
+  for (const link of links) {
+    if (!link?.url) continue;
+    const label = link.title || link.url;
+    const body = link.text
+      ? `\n\n${link.text}`
+      : '\n\n(No readable text could be extracted from this page.)';
+    parts.push({ type: 'text', text: `[Attached link: ${label}]\nURL: ${link.url}${body}` });
+  }
+  for (const url of imageDataUrls) {
+    const match = url.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (match) {
+      parts.push({ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } });
+    }
+  }
+  return parts;
+}
+
+/**
  * Send a message in the lesson conversation.
  * @param {string|string[]|null} imageDataUrl - data URL(s) for attached images
+ * @param {object[]} links - attached links [{ url, title, text }]; the page
+ *   text is sent to the coach this turn but only `{ url, title }` is persisted.
  */
-export async function sendMessage(lessonId, lesson, text, imageDataUrl, onStream) {
+export async function sendMessage(lessonId, lesson, text, imageDataUrl, links, onStream) {
   assertNotImpersonating('send a message');
   let lessonKB = await getLessonKB(lessonId);
   const profileSummary = await getLearnerProfileSummary();
 
   const imageDataUrls = normalizeImageDataUrls(imageDataUrl);
+  const linkList = Array.isArray(links) ? links.filter((l) => l && l.url) : [];
 
   // Validate and persist images as individual `screenshot:*` records. The
   // conversation record stores only these keys (see saveLessonMessages
@@ -222,21 +253,15 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, onStream
     .map(m => ({ role: m.role, content: m.content }))
     .filter(m => m.content && (typeof m.content === 'string' ? m.content.trim() : m.content.length));
 
-  // Build user message content
-  const userParts = [];
-  if (text) userParts.push({ type: 'text', text });
-  for (const url of imageDataUrls) {
-    const match = url.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (match) {
-      userParts.push({ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } });
-    }
-  }
+  // Build user message content (text, link page-text, then images)
+  const userParts = buildUserParts(text, imageDataUrls, linkList);
 
   // Always include context as first message so coach has lesson + profile info
   const prefs = await getPreferences();
   const contextMsg = buildContext(lesson, lessonKB, profileSummary, prefs.name);
   const messages = [{ role: 'user', content: contextMsg }, { role: 'assistant', content: 'Ready.' }, ...tail];
-  messages.push({ role: 'user', content: userParts.length === 1 && imageDataUrls.length === 0 ? text : userParts });
+  // Collapse to a plain string only when the turn is a single text block.
+  messages.push({ role: 'user', content: userParts.length === 1 && userParts[0].type === 'text' ? userParts[0].text : userParts });
 
   const coachMsg = await orchestrator.converseStream(
     'coach',
@@ -269,10 +294,17 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, onStream
   // Save messages. The persisted user message references images by KEY only
   // — the base64 lives in separate `screenshot:*` records. `imageDataUrls`
   // is attached for the caller's in-session render but is NOT persisted.
+  // Persist only `{ url, title }` for links — never the fetched page text
+  // (image parity; the text was injected into this turn's AI call only).
+  const metaLinks = linkList.map(({ url, title }) => ({ url, title }));
+  const metadata = (imageKeys.length > 0 || metaLinks.length > 0)
+    ? { ...(imageKeys.length > 0 ? { imageKeys } : {}), ...(metaLinks.length > 0 ? { links: metaLinks } : {}) }
+    : null;
   const persistedUserMsg = {
-    role: 'user', content: text || (imageDataUrls.length > 0 ? '[image]' : ''),
+    role: 'user',
+    content: text || (imageDataUrls.length > 0 ? '[image]' : (metaLinks.length > 0 ? '[link]' : '')),
     msgType: MSG_TYPES.USER, phase,
-    metadata: imageKeys.length > 0 ? { imageKeys } : null, timestamp: ts(),
+    metadata, timestamp: ts(),
   };
   const assistantMsg = { role: 'assistant', content: parsed.text, msgType: MSG_TYPES.GUIDE, phase, timestamp: ts() };
 

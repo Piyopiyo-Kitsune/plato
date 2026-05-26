@@ -83,6 +83,47 @@ is its own `screenshot:<key>` record, and the message stores only
   presence) — **never the `lesson` object identity**, which changes on every tab
   refocus and used to re-run the effect and reset the conversation mid-lesson.
 
+## Link attachments
+
+A learner attaches a web page to a coach message via a link button in
+`ComposeBar` (next to the image button). Fetching + extraction happen
+**server-side** — the browser can't fetch cross-origin pages (CORS), and
+server-side is where the SSRF defense must live.
+
+- **Endpoint:** `POST /v1/links/fetch` (`server/src/routes/links.js`, buffered
+  API function); `client/src/lib/links.js`'s `fetchLinkContent` calls it on
+  attach so the chip shows the real title immediately.
+- **Extraction** (`server/src/lib/link-extractor.js`): `fetchUrlContent` does a
+  plain fetch, `extractReadable` runs `@mozilla/readability` over a `linkedom`
+  DOM and converts the cleaned HTML to block-preserving text (Readability's
+  `textContent` fuses words across elements), falling back to a whole-body strip
+  for non-article pages. This is the **pluggable seam** — swap only the fetch
+  step for a headless browser / reader service to handle JS-rendered SPAs later
+  (the **known v1 gap**: SPAs return little text).
+- **SSRF defense** (`server/src/lib/url-guard.js`) — the headline risk, since
+  the server fetches user URLs from inside AWS. http/https + port allowlist, no
+  embedded credentials; rejects any loopback/private/link-local/reserved address
+  (incl. `169.254.169.254` and every IPv6 representation of those ranges —
+  compressed, expanded, hex/dotted IPv4-mapped); manual redirects (≤5 hops)
+  re-validated each hop; 10 s timeout, 3 MB cap, content-type allowlist, ~50 k
+  char truncation. **DNS rebinding is closed by pinning:** the fetch agent's
+  `connect.lookup` (`safeLookup`) validates the resolved address and the socket
+  connects to *that* IP, so a low-TTL host can't pass an up-front check then
+  re-resolve to an internal IP (the classic resolve-then-fetch TOCTOU). Uses
+  undici's own `fetch` + `Agent` (Node's built-in `fetch` rejects an external
+  undici dispatcher).
+- **Link text is untrusted, user-controlled content.** It's whatever the linked
+  page says, so it can contain prompt-injection attempts ("ignore previous
+  instructions…"). It's framed to the coach as `[Attached link: …]` user
+  content, which Claude is generally robust to, but treat it as untrusted —
+  don't add code paths that act on it as instructions.
+- **Recall is this-turn-only (image parity).** `buildUserParts` (`lessonEngine.js`)
+  injects the page text into the coach call on the attach turn (`[Attached
+  link: …]`, ordered text → links → images); it's never persisted or re-sent
+  (later turns see a `[link]` placeholder). Only `metadata.links: [{ url, title }]`
+  is persisted — so no 400 KB risk, no new sync record, no hydration; chips
+  render straight from that metadata on resume.
+
 ## Lessons: visibility, drafts, courses, classroom
 
 ### Visibility

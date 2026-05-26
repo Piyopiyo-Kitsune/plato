@@ -44,7 +44,7 @@ describe('lessonEngine impersonation guard', () => {
   it('sendMessage throws when sessionStorage has plato_impersonation', async () => {
     sessionStore.setItem('plato_impersonation', JSON.stringify({ userId: 'usr_target' }));
     await assert.rejects(
-      () => sendMessage('lesson-1', { name: 'L' }, 'hello', null, () => {}),
+      () => sendMessage('lesson-1', { name: 'L' }, 'hello', null, null, () => {}),
       /Cannot send a message while viewing as another user/
     );
   });

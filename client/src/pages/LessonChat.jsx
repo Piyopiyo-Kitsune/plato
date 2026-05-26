@@ -74,6 +74,7 @@ export default function LessonChat() {
   const composeAnchorRef = useRef(null);
   const [composeText, setComposeText] = useState('');
   const [composeImages, setComposeImages] = useState([]);
+  const [composeLinks, setComposeLinks] = useState([]);
 
   // Pin header when its top edge reaches the viewport top
   useEffect(() => {
@@ -197,23 +198,30 @@ export default function LessonChat() {
     return () => { cancelled = true; };
   }, [lessonGroupId, lessonLoaded, impersonating]);
 
-  const handleSend = useCallback(async ({ text, imageDataUrls }) => {
+  const handleSend = useCallback(async ({ text, imageDataUrls, links }) => {
     const hasImages = Array.isArray(imageDataUrls) && imageDataUrls.length > 0;
-    if (!text && !hasImages) return;
+    const hasLinks = Array.isArray(links) && links.length > 0;
+    if (!text && !hasImages && !hasLinks) return;
     setError('');
     setLoading('qa');
     setStreamingText('');
 
+    const optimisticMeta = (hasImages || hasLinks)
+      ? {
+          ...(hasImages ? { imageDataUrls } : {}),
+          ...(hasLinks ? { links: links.map(({ url, title }) => ({ url, title })) } : {}),
+        }
+      : null;
     setMessages(prev => [...prev, {
       role: 'user', content: text || '', msgType: MSG_TYPES.USER,
       phase: LESSON_PHASES.LEARNING,
-      metadata: hasImages ? { imageDataUrls } : null,
+      metadata: optimisticMeta,
       timestamp: Date.now(),
     }]);
 
     try {
       const result = await engine.sendMessage(
-        lessonGroupId, lesson, text, imageDataUrls,
+        lessonGroupId, lesson, text, imageDataUrls, links,
         (partial) => setStreamingText(partial)
       );
       const assistantMsg = result.messages.find(m => m.role === 'assistant');
@@ -297,6 +305,32 @@ export default function LessonChat() {
                 </div>
               );
             })()}
+            {Array.isArray(msg.metadata?.links) && msg.metadata.links.length > 0 && (
+              <div className="flex justify-end mt-1">
+                <div className="flex max-w-[85%] flex-col items-end gap-1">
+                  {msg.metadata.links.map((link, i) => {
+                    let host = link.url;
+                    try { host = new URL(link.url).hostname.replace(/^www\./, ''); } catch { /* keep raw */ }
+                    return (
+                      <a
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Attached link: ${link.title || host} (${host}) — opens in a new tab`}
+                        className="inline-flex max-w-full items-center gap-1.5 rounded-2xl rounded-br-sm bg-primary px-3 py-1.5 text-sm text-primary-foreground hover:underline"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                        </svg>
+                        <span className="truncate" aria-hidden="true">{link.title || host}</span>
+                        <span className="shrink-0 opacity-80" aria-hidden="true">{host}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       default:
@@ -401,10 +435,13 @@ export default function LessonChat() {
             onSend={handleSend}
             disabled={busy || impersonating}
             allowImages
+            allowLinks
             text={composeText}
             onTextChange={setComposeText}
             images={composeImages}
             onImagesChange={setComposeImages}
+            links={composeLinks}
+            onLinksChange={setComposeLinks}
           />
         </div>
       )}
@@ -417,11 +454,14 @@ export default function LessonChat() {
             onSend={handleSend}
             disabled={busy || impersonating}
             allowImages
+            allowLinks
             elevated
             text={composeText}
             onTextChange={setComposeText}
             images={composeImages}
             onImagesChange={setComposeImages}
+            links={composeLinks}
+            onLinksChange={setComposeLinks}
           />
         </div>
       )}
