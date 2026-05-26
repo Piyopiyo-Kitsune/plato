@@ -44,7 +44,7 @@ function htmlToText(html) {
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<li[^>]*>/gi, '\n• ')
       .replace(/<\/(p|div|li|h[1-6]|tr|blockquote|pre|section|article|header|footer|ul|ol|table)>/gi, '\n')
-      .replace(/<[^>]+>/g, '')
+      .replace(/[<>]/g, '')
   )
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
