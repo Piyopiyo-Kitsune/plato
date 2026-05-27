@@ -51,8 +51,14 @@ export default function UserStatsPanel({ userId }) {
   const formatRelativeTime = (isoString) => {
     if (!isoString) return 'Never';
     const then = new Date(isoString);
+    // Defense-in-depth: lastActiveAt is server-written, but lazy backfill
+    // derives it from user-controlled message timestamps, so guard against
+    // malformed or future-dated values rather than rendering "NaN months ago"
+    // or "-1 days ago" to admins.
+    if (Number.isNaN(then.getTime())) return 'Never';
     const now = new Date();
     const diffMs = now - then;
+    if (diffMs < 0) return 'Just now';
     const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';

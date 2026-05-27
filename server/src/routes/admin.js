@@ -1070,7 +1070,6 @@ admin.get('/v1/admin/users/:userId/stats', async (c) => {
   const url = new URL(c.req.url);
   const daysParam = parseInt(url.searchParams.get('days') || '30', 10);
   const days = Number.isFinite(daysParam) && daysParam > 0 && daysParam <= 365 ? daysParam : 30;
-  const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
   // Lesson name lookup
   const systemItems = await db.getAllSyncData('_system');
