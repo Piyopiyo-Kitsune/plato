@@ -1142,19 +1142,25 @@ describe('GET /v1/admin/users/:userId/stats', () => {
     assert.deepEqual(titles, ['Active Recall', 'Cognitive Load']);
   });
 
-  it('counts user_login audit entries within the window and ignores other actions', async () => {
+  it('returns lastActiveAt from the user record', async () => {
+    db.getUserById = async (id) => {
+      if (id === 'usr_admin') return { userId: 'usr_admin', role: 'admin', name: 'Admin' };
+      if (id === 'usr_learner') return {
+        userId: 'usr_learner',
+        role: 'user',
+        name: 'Learner',
+        email: 'l@x.com',
+        lastActiveAt: '2026-05-20T10:00:00Z',
+      };
+      return null;
+    };
     db.getAllSyncData = async () => [];
-    db.listAuditLogsForUser = async () => [
-      { action: 'user_login', createdAt: new Date().toISOString() },
-      { action: 'user_login', createdAt: new Date(Date.now() - 60_000).toISOString() },
-      { action: 'admin_view_as_user_started', createdAt: new Date().toISOString() }, // ignored
-    ];
     const app = new Hono(); app.route('/', admin);
     const res = await adminReq(app, 'GET', '/v1/admin/users/usr_learner/stats?days=7');
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.windowDays, 7);
-    assert.equal(data.loginsInWindow, 2);
+    assert.equal(data.lastActiveAt, '2026-05-20T10:00:00Z');
   });
 
   it('rejects non-admin', async () => {
