@@ -57,6 +57,19 @@ export function invalidateLessonsCache() {
 }
 
 /**
+ * Return the lessons belonging to a course as `[{ name, description }]`.
+ * Used to give the course-progress agent the course's shape for naming and
+ * framing. Empty array when the course has no lessons or is unknown.
+ */
+export async function getLessonsInCourse(courseId) {
+  if (!courseId) return [];
+  const lessons = await loadLessons();
+  return lessons
+    .filter(l => l.course?.id === courseId)
+    .map(l => ({ name: l.name, description: l.description }));
+}
+
+/**
  * Parse a lesson prompt markdown file into structured data.
  */
 export function parseLessonPrompt(lessonId, markdown) {

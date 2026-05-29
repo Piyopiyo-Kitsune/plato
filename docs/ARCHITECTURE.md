@@ -25,18 +25,19 @@ Detailed design notes and incident history for plato's load-bearing subsystems.
 
 ## AI agents
 
-8 AI agents via Bedrock or Anthropic API (prompt files in `client/prompts/`).
+9 AI agents via Bedrock or Anthropic API (prompt files in `client/prompts/`).
 Each prompt file has an HTML comment header documenting what it reads, who calls
 it, and its purpose:
 
-- **coach** — Reads: lesson prompt, lesson KB, learner profile, program KB. The main learner-facing agent.
-- **lesson-creator** — Reads: program KB. Helps admins design lessons via conversation.
+- **coach** — Reads: lesson prompt, lesson KB, learner profile, program KB, course name + cross-lesson progress note. The main learner-facing agent.
+- **lesson-creator** — Reads: program KB. Helps admins design lessons via conversation (and is aware lessons can belong to a persistent course).
 - **lesson-owner** — Reads: lesson prompt, learner profile. Initializes per-lesson KB.
 - **lesson-extractor** — Reads: conversation text only. Extracts lesson markdown from creation chat.
 - **knowledge-base-editor** — Reads: program KB. Helps admins create/edit the KB via conversation.
 - **knowledge-base-extractor** — Reads: existing KB + conversation. Merges changes into updated KB markdown. **Summarizes, doesn't transcribe** — it produces a concise reference (a few KB), because the full KB is re-appended to every coach turn and an unbounded KB overflows the context window (and silently truncates against the extractor's own `maxTokens`). The editor (`AdminCustomizer`/`AdminKBSetup`) windows live turns to the last 15, like the lesson creator.
 - **learner-profile-owner** — Reads: learner profile, lesson KB. Full profile update on lesson completion.
 - **learner-profile-update** — Reads: learner profile, activity context. Incremental profile updates during lessons.
+- **course-progress-update** — Reads: prior course summary, just-completed lesson KB, course lesson list. Maintains the per-learner `courseProgress:<courseId>` note injected into the coach as `course.progress`.
 
 Context appended at runtime (`client/js/orchestrator.js`):
 
@@ -243,6 +244,42 @@ removed: `lesson-extractor.md` (output format), `parseLessonPrompt`
 admin something the extractor will silently drop. Adding a persisted lesson
 field without updating the Creator's contract reintroduces exactly the
 scrubbed-directive bug.
+
+### Course progress (cross-lesson memory)
+
+When a lesson belongs to a course, the coach gets a **tiny, distilled,
+per-learner note of what that learner has demonstrated in the course's *other*
+lessons**, so it can connect threads ("building on the prompt you wrote earlier
+in the course…"). This is the learner-profile pattern scoped to a course — same
+proven, bounded plumbing as `profileSummary`, not a new mechanism.
+
+- **Store** — one `courseProgress:<courseId>` per learner (sync-data, key
+  allowlisted in `server/src/routes/sync.js`):
+  `{ courseId, summary, completedLessonIds[], updatedAt }`.
+- **Regenerate** — on completion, the `if (achieved)` block in
+  `lessonEngine.js` calls `updateCourseProgressOnCompletionInBackground`
+  (`client/src/lib/courseProgressQueue.js`, a sequential queue mirroring
+  `profileQueue.js`) **only when the lesson has a course**. The new
+  `course-progress-update` agent (`client/prompts/course-progress-update.md`,
+  `orchestrator.updateCourseProgress`) receives the *prior* summary + the *one*
+  just-completed lesson's KB (+ the course's lesson list from
+  `getLessonsInCourse`) and returns an updated summary with a **hard ~600-char
+  cap**. This **incremental distillation** — never concatenating all sibling KBs
+  — is what keeps both the agent's input and the injected note small.
+- **Inject** — `buildContext` takes an optional 5th `courseProgress` arg and, when
+  present, attaches it as `context.course.progress`. `startLesson`/`sendMessage`
+  fetch it via `loadCourseProgressSummary` when the lesson opens (within a session
+  the value only changes via *other* lessons' completions, so fetch-on-open is
+  enough). `coach.md` documents `course: { name, progress? }` as informational —
+  it never touches the exemplar or completion (`applyCoachResponseToKB` stays the
+  single owner of `progress`).
+
+**Out-of-order completion just works**: complete B → `courseProgress:<id>`
+regenerates → resume A → A's coach reads the now-current note including B. No
+coupling between the lessons themselves.
+
+*Known limitation (v1):* summaries build **forward** from completions after this
+shipped; pre-existing completions are not backfilled.
 
 ## Pacing & completion philosophy
 

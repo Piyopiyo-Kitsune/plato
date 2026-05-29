@@ -109,6 +109,49 @@ describe('buildContext', () => {
     assert.equal('course' in context, false, 'no course key should be emitted');
   });
 
+  // Cross-lesson course progress: a distilled, per-learner note of what they've
+  // demonstrated elsewhere in the course, passed as the 5th arg and surfaced as
+  // course.progress so the coach can connect threads. Absent arg → no progress.
+  it('attaches course.progress when a cross-lesson note is provided', () => {
+    const lesson = sampleLesson();
+    lesson.course = { id: 'course-abc', name: 'AI Foundations' };
+    const context = JSON.parse(buildContext(
+      lesson,
+      { status: 'active', progress: 2, activitiesCompleted: 3 },
+      'Learner profile summary',
+      'Alex',
+      'Completed Lesson B; wrote a clear system prompt.'
+    ));
+
+    assert.equal(context.course.name, 'AI Foundations');
+    assert.equal(context.course.progress, 'Completed Lesson B; wrote a clear system prompt.');
+  });
+
+  it('omits course.progress when no cross-lesson note is provided', () => {
+    const lesson = sampleLesson();
+    lesson.course = { id: 'course-abc', name: 'AI Foundations' };
+    const context = JSON.parse(buildContext(
+      lesson,
+      { status: 'active', progress: 2, activitiesCompleted: 3 },
+      'Learner profile summary',
+      'Alex'
+    ));
+
+    assert.deepEqual(context.course, { name: 'AI Foundations' });
+  });
+
+  it('does not attach course.progress when the lesson has no course', () => {
+    const context = JSON.parse(buildContext(
+      sampleLesson(),
+      { status: 'active', progress: 2, activitiesCompleted: 3 },
+      'Learner profile summary',
+      'Alex',
+      'Some stray progress note.'
+    ));
+
+    assert.equal('course' in context, false, 'no course note without a course');
+  });
+
   // Coach directive: author-supplied runtime guidance baked into the lesson
   // markdown (`## Coach Directive`). buildContext surfaces it verbatim so the
   // coach can follow it; absent directives produce no key.

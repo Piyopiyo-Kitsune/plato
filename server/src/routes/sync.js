@@ -8,7 +8,7 @@ const sync = new Hono();
 sync.use('/v1/sync', authenticate);
 sync.use('/v1/sync/*', authenticate);
 
-const VALID_DATA_KEYS = /^(profile|profileSummary|preferences|work|progress:.+|lessonKB:.+|activities:.+|activityKBs:.+|drafts:.+|messages:.+|screenshot:.+|lessons:.+|onboardingComplete)$/;
+const VALID_DATA_KEYS = /^(profile|profileSummary|preferences|work|progress:.+|courseProgress:.+|lessonKB:.+|activities:.+|activityKBs:.+|drafts:.+|messages:.+|screenshot:.+|lessons:.+|onboardingComplete)$/;
 
 // Keep user record name in sync with extension preferences
 async function syncNameIfNeeded(userId, dataKey, data) {

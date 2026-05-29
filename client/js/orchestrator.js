@@ -213,6 +213,24 @@ export async function updateProfileFromFeedback(fullProfile, feedbackText, activ
   return parseJSON(content);
 }
 
+// -- Course Progress Updater (LLM — distill cross-lesson progress) ------------
+
+export async function updateCourseProgress(courseName, lessonsInCourse, priorSummary, completedLesson, completedLessonIds) {
+  const systemPrompt = await loadPrompt('course-progress-update');
+  const userContent = JSON.stringify({
+    courseName,
+    lessonsInCourse,
+    priorSummary: priorSummary || '',
+    completedLesson,
+    completedLessonIds: completedLessonIds || [],
+  });
+  const { content } = await callApi({
+    model: MODEL_LIGHT, systemPrompt,
+    messages: [{ role: 'user', content: userContent }], maxTokens: 1024,
+  });
+  return parseJSON(content);
+}
+
 // -- Lesson markdown extraction (from conversation) ---------------------------
 
 export async function extractLessonMarkdown(conversationText) {

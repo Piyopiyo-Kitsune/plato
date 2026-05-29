@@ -9,7 +9,7 @@
 
 import {
   getLearnerProfileSummary, getPreferences,
-  getLessonKB, saveLessonKB,
+  getLessonKB, saveLessonKB, getCourseProgress,
   saveScreenshot, getScreenshot,
   saveLessonMessages, getLessonMessages, replaceLessonMessages,
 } from '../../js/storage.js';
@@ -17,6 +17,7 @@ import * as orchestrator from '../../js/orchestrator.js';
 import { compressImageDataUrl } from './imageCompression.js';
 import { syncInBackground } from './syncDebounce.js';
 import { ensureProfileExists, updateProfileOnCompletionInBackground, updateProfileFromObservation } from './profileQueue.js';
+import { updateCourseProgressOnCompletionInBackground } from './courseProgressQueue.js';
 import { LESSON_PHASES, MSG_TYPES, MAX_EXCHANGES } from './constants.js';
 
 function ts() { return Date.now(); }
@@ -157,7 +158,8 @@ export async function startLesson(lessonId, lesson, onStream) {
 
   // Coach opens the conversation
   const prefs = await getPreferences();
-  const context = buildContext(lesson, lessonKB, profileSummary, prefs.name);
+  const courseProgress = await loadCourseProgressSummary(lesson);
+  const context = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress);
   const coachMsg = await orchestrator.converseStream(
     'coach',
     [{ role: 'user', content: context }, { role: 'assistant', content: 'Ready.' }, { role: 'user', content: 'Start the lesson.' }],
@@ -258,7 +260,8 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, links, o
 
   // Always include context as first message so coach has lesson + profile info
   const prefs = await getPreferences();
-  const contextMsg = buildContext(lesson, lessonKB, profileSummary, prefs.name);
+  const courseProgress = await loadCourseProgressSummary(lesson);
+  const contextMsg = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress);
   const messages = [{ role: 'user', content: contextMsg }, { role: 'assistant', content: 'Ready.' }, ...tail];
   // Collapse to a plain string only when the turn is a single text block.
   messages.push({ role: 'user', content: userParts.length === 1 && userParts[0].type === 'text' ? userParts[0].text : userParts });
@@ -289,6 +292,11 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, links, o
   }
   if (achieved) {
     updateProfileOnCompletionInBackground(lessonKB, lesson);
+    // When the lesson belongs to a course, refresh the cross-lesson progress
+    // note so the coach for sibling lessons sees what was just demonstrated.
+    if (lesson.course?.id) {
+      updateCourseProgressOnCompletionInBackground(lessonKB, lesson);
+    }
   }
 
   // Save messages. The persisted user message references images by KEY only
@@ -458,7 +466,23 @@ export function applyCoachResponseToKB(prevKB, parsed, { now = Date.now } = {}) 
   return { lessonKB: next, achieved, phase };
 }
 
-export function buildContext(lesson, lessonKB, profileSummary, learnerName) {
+/**
+ * Fetch the distilled cross-lesson progress note for a lesson's course, if any.
+ * Returns undefined when the lesson has no course or no note exists yet (so
+ * buildContext omits it). Within a session this value only changes via OTHER
+ * lessons' completions, so fetching when the lesson opens is sufficient.
+ */
+async function loadCourseProgressSummary(lesson) {
+  if (!lesson?.course?.id) return undefined;
+  try {
+    const record = await getCourseProgress(lesson.course.id);
+    return record?.summary || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function buildContext(lesson, lessonKB, profileSummary, learnerName, courseProgress) {
   const completed = lessonKB?.activitiesCompleted || 0;
   const lessonStatus = lessonKB?.status === 'completed' ? 'completed' : 'active';
   const context = {
@@ -485,9 +509,12 @@ export function buildContext(lesson, lessonKB, profileSummary, learnerName) {
   }
   // Optional course taxonomy: when a lesson belongs to a wider course, the
   // server inlines `lesson.course = { id, name }`. Surface the name so the
-  // coach can frame this lesson within the course's arc.
+  // coach can frame this lesson within the course's arc. When a cross-lesson
+  // progress note exists for this learner, attach it as `progress` so the coach
+  // can connect threads — informational only; it never touches completion.
   if (lesson.course && lesson.course.name) {
     context.course = { name: lesson.course.name };
+    if (courseProgress) context.course.progress = courseProgress;
   }
   if (lessonStatus === 'completed') {
     // Completed threads are feedback-only. Skip pacing nudges — they'd

@@ -143,6 +143,19 @@ export async function deleteLessonKB(lessonId) {
   await deleteSyncData(`lessonKB:${lessonId}`);
 }
 
+// -- Course progress ----------------------------------------------------------
+// Per-learner, per-course distilled summary of progress across a course's
+// lessons. Regenerated in the background on each completion; injected into the
+// coach context for every other lesson in the course. See courseProgressQueue.
+
+export async function getCourseProgress(courseId) {
+  return fetchSyncData(`courseProgress:${courseId}`);
+}
+
+export async function saveCourseProgress(courseId, progress) {
+  await putSyncData(`courseProgress:${courseId}`, progress);
+}
+
 // -- Activity KB --------------------------------------------------------------
 
 export async function getActivityKB(activityId) {
