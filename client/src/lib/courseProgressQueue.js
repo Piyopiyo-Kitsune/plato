@@ -16,6 +16,22 @@ import { syncInBackground } from './syncDebounce.js';
 
 let _courseProgressQueue = Promise.resolve();
 
+/**
+ * Merge the completed-lesson ids for a course after a completion. Completions
+ * are monotonic — a lesson never becomes "uncompleted" — so this unions the
+ * prior ids, whatever the agent returned, and the just-completed lesson, then
+ * dedupes. It can only grow the set: an agent that returns an empty/partial/
+ * malformed array can't shrink it (note `[] || x` is truthy, the bug this
+ * guards against), and a prior id is never lost. Exported for unit testing.
+ */
+export function mergeCompletedLessonIds(priorIds, returnedIds, lessonId) {
+  return [...new Set([
+    ...(Array.isArray(priorIds) ? priorIds : []),
+    ...(Array.isArray(returnedIds) ? returnedIds : []),
+    ...(lessonId ? [lessonId] : []),
+  ])];
+}
+
 export function queueCourseProgressUpdate(fn) {
   _courseProgressQueue = _courseProgressQueue.then(fn).catch(e => {
     console.error('[plato] Course progress update failed:', e?.message || e, e?.stack);
@@ -31,7 +47,10 @@ export function queueCourseProgressUpdate(fn) {
  */
 export function updateCourseProgressOnCompletionInBackground(lessonKB, lesson) {
   const courseId = lesson?.course?.id;
-  if (!courseId) return Promise.resolve();
+  // No-op for standalone lessons; the lessonId guard keeps `undefined` out of
+  // the persisted completedLessonIds array (defense-in-depth — the caller in
+  // lessonEngine already gates on lesson.course?.id).
+  if (!courseId || !lesson?.lessonId) return Promise.resolve();
   return queueCourseProgressUpdate(async () => {
     const prior = await getCourseProgress(courseId);
     const lessonsInCourse = await getLessonsInCourse(courseId);
@@ -51,10 +70,11 @@ export function updateCourseProgressOnCompletionInBackground(lessonKB, lesson) {
       console.error('[plato] Course progress agent returned no summary:', result);
       return;
     }
-    const completedLessonIds = [...new Set([
-      ...(result.completedLessonIds || prior?.completedLessonIds || []),
+    const completedLessonIds = mergeCompletedLessonIds(
+      prior?.completedLessonIds,
+      result.completedLessonIds,
       lesson.lessonId,
-    ])];
+    );
     await saveCourseProgress(courseId, {
       courseId,
       summary: result.summary,
