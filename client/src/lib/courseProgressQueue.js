@@ -21,8 +21,10 @@ let _courseProgressQueue = Promise.resolve();
  * are monotonic — a lesson never becomes "uncompleted" — so this unions the
  * prior ids, whatever the agent returned, and the just-completed lesson, then
  * dedupes. It can only grow the set: an agent that returns an empty/partial/
- * malformed array can't shrink it (note `[] || x` is truthy, the bug this
- * guards against), and a prior id is never lost. Exported for unit testing.
+ * malformed array can't shrink it, and a prior id is never lost. This replaces
+ * `result.completedLessonIds || prior`, which dropped prior ids when the agent
+ * returned `[]` — the empty array is itself truthy, so `||` short-circuited to
+ * it. Exported for unit testing.
  */
 export function mergeCompletedLessonIds(priorIds, returnedIds, lessonId) {
   return [...new Set([

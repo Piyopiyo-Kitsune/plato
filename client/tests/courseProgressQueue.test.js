@@ -32,7 +32,9 @@ describe('mergeCompletedLessonIds', () => {
   });
 
   it('keeps prior ids when the agent returns an empty array (the bug)', () => {
-    // `[] || prior` was truthy, so the old code dropped prior → [B]. Must keep A.
+    // The bug: `result.completedLessonIds || prior` evaluated to `[]` because the
+    // empty array is itself truthy, so `||` short-circuits to it and prior was
+    // dropped → old result [B]. The union keeps A.
     assert.deepEqual(mergeCompletedLessonIds(['A'], [], 'B'), ['A', 'B']);
   });
 
