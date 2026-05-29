@@ -20,8 +20,11 @@ let _courseProgressQueue = Promise.resolve();
  * Merge the completed-lesson ids for a course after a completion. Completions
  * are monotonic — a lesson never becomes "uncompleted" — so this unions the
  * prior ids, whatever the agent returned, and the just-completed lesson, then
- * dedupes. It can only grow the set: an agent that returns an empty/partial/
- * malformed array can't shrink it, and a prior id is never lost. This replaces
+ * dedupes. It can only grow the set: a prior id is never lost, and the client
+ * owns the bookkeeping — the `course-progress-update` agent no longer returns
+ * ids (it can't see the just-completed lesson's id), so `returnedIds` is
+ * normally undefined and is purely defensive: an agent that returns an
+ * empty/partial/malformed array can't shrink the set. This replaces
  * `result.completedLessonIds || prior`, which dropped prior ids when the agent
  * returned `[]` — the empty array is itself truthy, so `||` short-circuited to
  * it. Exported for unit testing.

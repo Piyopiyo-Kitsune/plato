@@ -16,7 +16,7 @@ You receive a JSON object:
 - `lessonsInCourse`: `[{ name, description }]` — every lesson in the course, for naming and framing
 - `priorSummary`: the current note (may be empty on the first completion)
 - `completedLesson`: `{ name, learnerPosition, insights }` — the lesson the learner just finished
-- `completedLessonIds`: lesson ids already counted as complete before this one
+- `completedLessonIds`: ids of lessons already complete — **context only**. The platform tracks this list itself; you don't manage or return it.
 
 ## Core principle: revise, don't accumulate
 
@@ -35,8 +35,7 @@ The `summary` MUST be at most 600 characters. It is injected into every coach tu
 Respond with ONLY valid JSON, no markdown fencing:
 
 {
-  "summary": "...",
-  "completedLessonIds": ["lesson-id", "..."]
+  "summary": "..."
 }
 
-`completedLessonIds` is `completedLessonIds` from the input plus the just-completed lesson's id (deduplicated).
+Return only the `summary`. The platform records which lessons are complete on its own (it already knows the just-completed lesson's id) — you don't need to track or emit lesson ids.
