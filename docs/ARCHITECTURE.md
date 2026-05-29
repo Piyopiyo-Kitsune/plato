@@ -242,6 +242,42 @@ admin something the extractor will silently drop. Adding a persisted lesson
 field without updating the Creator's contract reintroduces exactly the
 scrubbed-directive bug.
 
+### Course progress (cross-lesson memory)
+
+When a lesson belongs to a course, the coach gets a **tiny, distilled,
+per-learner note of what that learner has demonstrated in the course's *other*
+lessons**, so it can connect threads ("building on the prompt you wrote earlier
+in the course…"). This is the learner-profile pattern scoped to a course — same
+proven, bounded plumbing as `profileSummary`, not a new mechanism.
+
+- **Store** — one `courseProgress:<courseId>` per learner (sync-data, key
+  allowlisted in `server/src/routes/sync.js`):
+  `{ courseId, summary, completedLessonIds[], updatedAt }`.
+- **Regenerate** — on completion, the `if (achieved)` block in
+  `lessonEngine.js` calls `updateCourseProgressOnCompletionInBackground`
+  (`client/src/lib/courseProgressQueue.js`, a sequential queue mirroring
+  `profileQueue.js`) **only when the lesson has a course**. The new
+  `course-progress-update` agent (`client/prompts/course-progress-update.md`,
+  `orchestrator.updateCourseProgress`) receives the *prior* summary + the *one*
+  just-completed lesson's KB (+ the course's lesson list from
+  `getLessonsInCourse`) and returns an updated summary with a **hard ~600-char
+  cap**. This **incremental distillation** — never concatenating all sibling KBs
+  — is what keeps both the agent's input and the injected note small.
+- **Inject** — `buildContext` takes an optional 5th `courseProgress` arg and, when
+  present, attaches it as `context.course.progress`. `startLesson`/`sendMessage`
+  fetch it via `loadCourseProgressSummary` when the lesson opens (within a session
+  the value only changes via *other* lessons' completions, so fetch-on-open is
+  enough). `coach.md` documents `course: { name, progress? }` as informational —
+  it never touches the exemplar or completion (`applyCoachResponseToKB` stays the
+  single owner of `progress`).
+
+**Out-of-order completion just works**: complete B → `courseProgress:<id>`
+regenerates → resume A → A's coach reads the now-current note including B. No
+coupling between the lessons themselves.
+
+*Known limitation (v1):* summaries build **forward** from completions after this
+shipped; pre-existing completions are not backfilled.
+
 ## Pacing & completion philosophy
 
 Microlearning constraints live in `client/src/lib/constants.js`:

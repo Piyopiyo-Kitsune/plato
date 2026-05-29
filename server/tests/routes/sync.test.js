@@ -114,6 +114,24 @@ describe('PUT /v1/sync/:dataKey', () => {
     const res = await authedReq(app, 'PUT', '/v1/sync/progress:basics-wordpress', { data: {}, version: 0 });
     assert.equal(res.status, 200);
   });
+
+  it('accepts courseProgress:<courseId> keys (cross-lesson progress note)', async () => {
+    db.putSyncData = async () => ({ version: 1, updatedAt: '2024-01-01T00:00:00Z' });
+    const app = new Hono();
+    app.route('/', sync);
+    const res = await authedReq(app, 'PUT', '/v1/sync/courseProgress:course-abc', {
+      data: { courseId: 'course-abc', summary: 'Learner has built a clear intro.', completedLessonIds: ['l1'] },
+      version: 0,
+    });
+    assert.equal(res.status, 200);
+  });
+
+  it('rejects a bare courseProgress key with no course id', async () => {
+    const app = new Hono();
+    app.route('/', sync);
+    const res = await authedReq(app, 'PUT', '/v1/sync/courseProgress:', { data: {} });
+    assert.equal(res.status, 400);
+  });
 });
 
 describe('PUT /v1/sync/batch', () => {
