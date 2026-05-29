@@ -25,18 +25,19 @@ Detailed design notes and incident history for plato's load-bearing subsystems.
 
 ## AI agents
 
-8 AI agents via Bedrock or Anthropic API (prompt files in `client/prompts/`).
+9 AI agents via Bedrock or Anthropic API (prompt files in `client/prompts/`).
 Each prompt file has an HTML comment header documenting what it reads, who calls
 it, and its purpose:
 
-- **coach** — Reads: lesson prompt, lesson KB, learner profile, program KB. The main learner-facing agent.
-- **lesson-creator** — Reads: program KB. Helps admins design lessons via conversation.
+- **coach** — Reads: lesson prompt, lesson KB, learner profile, program KB, course name + cross-lesson progress note. The main learner-facing agent.
+- **lesson-creator** — Reads: program KB. Helps admins design lessons via conversation (and is aware lessons can belong to a persistent course).
 - **lesson-owner** — Reads: lesson prompt, learner profile. Initializes per-lesson KB.
 - **lesson-extractor** — Reads: conversation text only. Extracts lesson markdown from creation chat.
 - **knowledge-base-editor** — Reads: program KB. Helps admins create/edit the KB via conversation.
 - **knowledge-base-extractor** — Reads: existing KB + conversation. Merges changes into updated KB markdown.
 - **learner-profile-owner** — Reads: learner profile, lesson KB. Full profile update on lesson completion.
 - **learner-profile-update** — Reads: learner profile, activity context. Incremental profile updates during lessons.
+- **course-progress-update** — Reads: prior course summary, just-completed lesson KB, course lesson list. Maintains the per-learner `courseProgress:<courseId>` note injected into the coach as `course.progress`.
 
 Context appended at runtime (`client/js/orchestrator.js`):
 
