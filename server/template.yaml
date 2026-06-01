@@ -144,6 +144,14 @@ Resources:
             - Effect: Allow
               Action: logs:DescribeLogGroups
               Resource: "*"
+        - Statement:
+            # Self-invoke for stale-while-revalidate dashboard stats refresh.
+            # Both functions share route handlers; admin.js can be called from
+            # either the API Gateway (PlatoApiFunction) or Function URL (this
+            # function). The stats cache needs lambda:InvokeFunction in both.
+            - Effect: Allow
+              Action: lambda:InvokeFunction
+              Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-*"
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: RESPONSE_STREAM
