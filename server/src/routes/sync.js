@@ -2,6 +2,8 @@ import { Hono } from 'hono';
 import db from '../lib/db.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { isPublicLessonRecord } from '../lib/lesson-visibility.js';
+import { emit as emitHook } from '../lib/plugins/hooks.js';
+import { pluginRegistry } from '../lib/plugins/registry.js';
 
 const sync = new Hono();
 
@@ -280,6 +282,90 @@ sync.delete('/v1/sync/:dataKey', async (c) => {
 
   await db.deleteSyncData(userId, dataKey);
   return c.json({ ok: true });
+});
+
+/**
+ * POST /v1/sync/lesson-started — emit the lessonStarted hook and collect
+ * enrichment responses from plugins. Called by the client when a learner
+ * starts a lesson (after the lessonKB is initialized but before the coach
+ * opens the conversation).
+ *
+ * Request body:
+ *   - lessonId: string (required)
+ *   - lesson: { name, markdown, exemplar, learningObjectives } (required)
+ *   - lessonKB: object (required)
+ *
+ * Response:
+ *   - enrichments: array of enrichment objects from plugins
+ *   - startupSteps: array of startup step definitions (future use)
+ *
+ * Enrichment object shape:
+ *   - pluginId: string
+ *   - label: string (display name)
+ *   - context: string (reference material for coach)
+ *   - reasoning: string (why this context matters)
+ *   - sources: array of { url, title, excerpt }
+ *
+ * Plugins with hook.lessonStarted + lessonEnrichment capability can return
+ * enrichment data. The host stores enrichments on lessonKB.enrichments,
+ * injects them into the coach system context, and displays them in the
+ * lesson overview "Additional Context" section.
+ *
+ * Fail-open: plugin errors are caught and logged; enrichment failures never
+ * block lesson start.
+ */
+sync.post('/v1/sync/lesson-started', async (c) => {
+  const reject = rejectWriteIfImpersonating(c);
+  if (reject) return reject;
+  const userId = c.get('userId');
+  const { lessonId, lesson, lessonKB } = await c.req.json();
+
+  if (!lessonId || !lesson || !lessonKB) {
+    return c.json({ error: 'lessonId, lesson, and lessonKB are required' }, 400);
+  }
+
+  // Cap lesson.markdown size to prevent DoS (plugins inject it into AI prompts)
+  if (lesson.markdown && lesson.markdown.length > 100_000) {
+    return c.json({ error: 'lesson.markdown exceeds 100k character limit' }, 413);
+  }
+
+  // Collect startup steps from enabled plugins that declare lessonStartupSteps
+  const startupSteps = [];
+  for (const entry of pluginRegistry.list()) {
+    if (entry.enabled && entry.manifest?.extensionPoints?.lessonStartupSteps) {
+      const steps = entry.manifest.extensionPoints.lessonStartupSteps;
+      for (const step of steps) {
+        startupSteps.push({
+          pluginId: entry.manifest.id,
+          pluginLabel: entry.manifest.name,
+          id: step.id,
+          label: step.label,
+          description: step.description,
+          status: 'pending', // Plugins will report status via progress callback
+        });
+      }
+    }
+  }
+
+  // Emit the hook. Plugins with hook.lessonStarted + lessonEnrichment capability
+  // can return enrichment data: { context, sources, reasoning, pluginId, label }.
+  // The emit function collects non-null return values from all handlers.
+  const enrichments = await emitHook('lessonStarted', {
+    userId,
+    lessonId,
+    lesson: {
+      name: lesson.name,
+      markdown: lesson.markdown,
+      exemplar: lesson.exemplar,
+      learningObjectives: lesson.learningObjectives,
+    },
+    lessonKB
+  });
+
+  return c.json({
+    enrichments: enrichments || [],
+    startupSteps,
+  });
 });
 
 export default sync;

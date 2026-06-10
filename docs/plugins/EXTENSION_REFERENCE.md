@@ -144,9 +144,10 @@ The hook bus is at `server/src/lib/plugins/hooks.js`. **Open by design** — any
 ### `lessonStarted`
 
 - **Capability:** `hook.lessonStarted`
-- **Payload:** `{ userId: string, lessonId: string, lessonKB: object }`
-- **Emit point:** `server/src/routes/sync.js` on first PUT of `lessonKB:<id>` (no prior version)
-- **Phase:** 2
+- **Payload:** `{ userId: string, lessonId: string, lesson: { name, markdown, exemplar, learningObjectives }, lessonKB: object }`
+- **Emit point:** `server/src/routes/sync.js` POST `/v1/sync/lesson-started` — called by `client/src/lib/lessonEngine.js#startLesson()` after the Lesson Owner agent initializes the KB but before the Coach opens the conversation
+- **Phase:** 1 (wired)
+- **Gotchas:** Plugins can use this to enrich the lesson at start time (e.g., fetch external docs, add context from a knowledge base). The lesson markdown and objectives are included so plugins can decide whether to act. Enrichment responses (if the plugin returns data) are collected by the endpoint and stored on `lessonKB.enrichments`. Plugins MUST fail open — errors must never block lesson start.
 
 ### `lessonCompleted`
 
@@ -171,6 +172,69 @@ The hook bus is at `server/src/lib/plugins/hooks.js`. **Open by design** — any
 - **Phase:** 1.1
 - **Notes:** The user's `userMeta:*` records are auto-deleted by the cascade — plugins don't need to explicitly clean up. Subscribe to this hook only if you have side effects beyond plato (e.g., notify external systems, archive content).
 
+## Enrichment Pattern
+
+The `lessonStarted` hook + `lessonEnrichment` capability enable a powerful pattern: plugins can inject additional reference material into lessons at start time. The host collects enrichment responses, stores them on `lessonKB.enrichments`, injects them into the coach's system context, and displays them to the learner as collapsible artifact panels.
+
+### Use cases
+- **External docs** — fetch WordPress.org docs, React API references, MDN articles
+- **Knowledge bases** — query internal wikis, Confluence, Notion
+- **Recent updates** — pull latest bug reports, release notes, deprecation warnings
+- **Company context** — add org-specific best practices, security policies, code standards
+
+### Contract
+
+A `lessonStarted` hook handler with `lessonEnrichment` capability can return an enrichment object:
+
+```js
+{
+  pluginId: 'wordpress-info',       // Required: your plugin id
+  label: 'WordPress.org',            // Required: display name shown to learner
+  context: 'When building custom...',// Required: ~300 word summary for the coach
+  reasoning: 'This lesson focuses...', // Required: why this context matters
+  sources: [                         // Optional: citation links
+    { url: 'https://...', title: '...', excerpt: '...' }
+  ]
+}
+```
+
+**Return `null`** (or omit the return) when your plugin doesn't enrich this lesson. The host filters out nulls — only non-null returns are stored.
+
+### Lifecycle
+
+1. Learner starts a lesson → `client/src/lib/lessonEngine.js#startLesson()` calls `POST /v1/sync/lesson-started`
+2. Server emits `lessonStarted` hook with `{ userId, lessonId, lesson, lessonKB }`
+3. Each plugin handler runs; non-null returns are collected
+4. Server returns `{ enrichments: [...] }` to client
+5. Client stores `lessonKB.enrichments` (one-time — never re-runs on resume)
+6. `buildContext()` injects enrichments into coach system prompt
+7. `LessonChat` renders `<EnrichmentArtifact>` above first coach message
+
+### Fail-open requirements
+
+**Plugins MUST fail open** — enrichment errors must never block lesson start. The reference implementation (WordPress Info plugin) demonstrates:
+
+- Planner returns `{ shouldEnrich: false }` → no enrichment (learner sees normal lesson)
+- Query executor timeout or API error → empty results → no enrichment
+- Synthesizer error → no enrichment
+- Hook handler throws → host catches error, logs `plugin_hook_failed`, skips that plugin
+
+### Example: WordPress Info plugin
+
+Three-agent pipeline:
+1. **Planner** (`prompts/wordpress-info-planner.md`) — detects WordPress keywords in lesson objectives, outputs `{ shouldEnrich: bool, queries: [{ text, sources }] }`
+2. **Query executor** — fetches from wordpress.org REST API, Make WordPress blogs, GitHub code search in parallel
+3. **Synthesizer** (`prompts/wordpress-info-synthesizer.md`) — distills results into lesson-specific summary
+
+Hook handler returns enrichment data or `null`. See `plugins/wordpress-info/` for the full implementation.
+
+### Anti-goals
+
+- ❌ Don't override completion semantics — enrichment is informational only; the coach (`applyCoachResponseToKB`) remains the single owner of progress
+- ❌ Don't delay lesson start beyond ~3-5 seconds — use timeouts, caching, or background jobs for slow sources
+- ❌ Don't inline huge docs — the synthesizer should distill to ~300 words
+- ❌ Don't re-run enrichment on every chat turn — it's computed once at start and cached on `lessonKB`
+
 ## Capabilities
 
 | Capability | Grants | Phase |
@@ -186,6 +250,7 @@ The hook bus is at `server/src/lib/plugins/hooks.js`. **Open by design** — any
 | `kpi` | Contribute admin KPIs | 2 |
 | `agent` | Contribute AI agent prompt | 3 |
 | `syncData.namespace` | Write `plugin:<id>:*` sync-data keys | 3 |
+| `lessonEnrichment` | Enrich lessons at start with additional context | 1 |
 
 A plugin using an extension point without declaring its capability fails registration with `plugin_capability_missing`.
 
