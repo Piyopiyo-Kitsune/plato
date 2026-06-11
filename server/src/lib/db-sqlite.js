@@ -123,6 +123,14 @@ if (hasLastActiveAt.count === 0) {
   sqlite.exec('ALTER TABLE users ADD COLUMN lastActiveAt TEXT');
 }
 
+// Add locale column to users if missing
+const hasLocale = sqlite.prepare(
+  "SELECT COUNT(*) as count FROM pragma_table_info('users') WHERE name = 'locale'"
+).get();
+if (hasLocale.count === 0) {
+  sqlite.exec('ALTER TABLE users ADD COLUMN locale TEXT');
+}
+
 // Add slackUserId column to invites if missing
 const hasSlackInvite = sqlite.prepare(
   "SELECT COUNT(*) as count FROM pragma_table_info('invites') WHERE name = 'slackUserId'"
@@ -156,12 +164,12 @@ function conditionalCheckFailed(message) {
 const db = {
   // ── Users ──
 
-  async createUser({ userId, email, passwordHash, name, username, userGroup, role, slackUserId }) {
+  async createUser({ userId, email, passwordHash, name, username, userGroup, role, slackUserId, locale }) {
     const now = new Date().toISOString();
     const result = sqlite.prepare(
-      `INSERT OR IGNORE INTO users (userId, email, username, passwordHash, name, userGroup, role, slackUserId, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(userId, email.toLowerCase(), username || null, passwordHash, name, userGroup || null, role, slackUserId || null, now, now);
+      `INSERT OR IGNORE INTO users (userId, email, username, passwordHash, name, userGroup, role, slackUserId, locale, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(userId, email.toLowerCase(), username || null, passwordHash, name, userGroup || null, role, slackUserId || null, locale || null, now, now);
     if (result.changes === 0) throw conditionalCheckFailed('User already exists');
   },
 

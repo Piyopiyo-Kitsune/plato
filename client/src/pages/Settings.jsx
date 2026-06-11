@@ -27,6 +27,7 @@ export default function Settings() {
   const { user, refreshUser } = useAuth();
   const [name, setName] = useState(user?.name || state.preferences?.name || '');
   const [username, setUsername] = useState(user?.username || '');
+  const [locale, setLocale] = useState(user?.locale || '');
   const [profileSummary, setProfileSummary] = useState('');
 
   const [newPassword, setNewPassword] = useState('');
@@ -35,6 +36,7 @@ export default function Settings() {
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [nameFeedback, setNameFeedback] = useState('');
   const [usernameFeedback, setUsernameFeedback] = useState('');
+  const [localeFeedback, setLocaleFeedback] = useState('');
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   useEffect(() => {
@@ -77,6 +79,18 @@ export default function Settings() {
       setNameFeedback(err.message || 'Failed to update');
     }
     setTimeout(() => setNameFeedback(''), 2000);
+  };
+
+  const handleSaveLocale = async (e) => {
+    e.preventDefault();
+    try {
+      await updateProfile({ locale: locale.trim() || null });
+      await refreshUser();
+      setLocaleFeedback('Saved!');
+    } catch (err) {
+      setLocaleFeedback(err.message || 'Failed to update');
+    }
+    setTimeout(() => setLocaleFeedback(''), 2000);
   };
 
   const handleChangePassword = async (e) => {
@@ -138,6 +152,24 @@ export default function Settings() {
             </div>
             <Button type="submit">Save</Button>
             {nameFeedback && <p className="text-sm text-green-600" role="status" aria-live="polite">{nameFeedback}</p>}
+          </form>
+
+          <Separator />
+
+          <form className="space-y-3" onSubmit={handleSaveLocale}>
+            <div className="space-y-1.5">
+              <Label htmlFor="account-locale">Language</Label>
+              <Input
+                id="account-locale"
+                type="text"
+                value={locale}
+                onChange={(e) => setLocale(e.target.value)}
+                placeholder="en, en-US, fr, es, etc."
+              />
+              <p className="text-xs text-muted-foreground">Preferred language for UI and coaching (e.g., en, en-US, fr, es)</p>
+            </div>
+            <Button type="submit">Save</Button>
+            {localeFeedback && <p className="text-sm text-muted-foreground" role="status" aria-live="polite">{localeFeedback}</p>}
           </form>
 
           <Separator />

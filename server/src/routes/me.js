@@ -25,6 +25,7 @@ me.get('/v1/me', (c) => {
     name: user.name,
     userGroup: user.userGroup,
     role: user.role,
+    locale: user.locale || null,
     createdAt: user.createdAt,
   });
 });
@@ -33,7 +34,7 @@ me.get('/v1/me', (c) => {
 me.patch('/v1/me', async (c) => {
   const userId = c.get('userId');
   const body = await c.req.json();
-  const allowed = ['name', 'email', 'username', 'group', 'password'];
+  const allowed = ['name', 'email', 'username', 'group', 'password', 'locale'];
   const updates = {};
 
   for (const key of allowed) {
@@ -57,6 +58,12 @@ me.patch('/v1/me', async (c) => {
           return c.json({ error: 'Username already taken' }, 409);
         }
         updates.username = body.username.toLowerCase();
+      } else if (key === 'locale') {
+        const localeVal = typeof body.locale === 'string' ? body.locale.trim() : '';
+        if (localeVal && !/^[a-z]{2}(-[A-Z]{2})?$/.test(localeVal)) {
+          return c.json({ error: 'Invalid locale format (expected: en, en-US, fr, etc.)' }, 400);
+        }
+        updates.locale = localeVal || null;
       } else {
         updates[key] = body[key];
       }
@@ -77,6 +84,7 @@ me.patch('/v1/me', async (c) => {
     name: updated.name,
     userGroup: updated.userGroup,
     role: updated.role,
+    locale: updated.locale || null,
   });
 });
 
@@ -100,6 +108,7 @@ me.get('/v1/me/export', async (c) => {
       name: user.name,
       userGroup: user.userGroup,
       role: user.role,
+      locale: user.locale || null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     },
