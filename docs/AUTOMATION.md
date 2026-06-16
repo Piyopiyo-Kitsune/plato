@@ -158,10 +158,32 @@ For the full deploy procedure, SSM parameters, and backup layers, see
 
 ## Branch protection
 
-`main` and `playground` are ruleset-protected (required PR + 1 approving review +
-passing `review` status check from the Code Review workflow; no force pushes; no
-deletion). Blake as repository admin is on the bypass list with
-`bypass_mode: always` for emergency overrides.
+`main` and `playground` are ruleset-protected (Settings → Rules → Rulesets →
+"Protect main and playground"): required PR + 1 approving review + passing
+`review` status check from the Code Review workflow; no force pushes; no deletion.
+
+**Bypass mode**: "Pull requests only" — repository admins **cannot push directly**
+to protected branches (even for emergencies), but can merge PRs without waiting
+for approvals. This enforces the PR workflow while preserving emergency merge
+capability.
+
+This ensures every change to production:
+- Goes through a PR (no direct pushes)
+- Gets code-reviewed by the Bedrock workflow
+- Runs the full CI suite (lint, tests, CodeQL)
+
+### Emergency hotfix procedure
+
+For urgent production fixes:
+
+1. Create a branch: `git checkout -b hotfix/brief-description`
+2. Make your fix and commit
+3. Push and open a PR: `gh pr create --title "Hotfix: ..." --body "..."`
+4. **Merge immediately** (bypass mode lets you merge without waiting for review)
+5. The code review workflow will run post-merge for audit
+
+The ruleset blocks direct pushes but doesn't block merges — you retain emergency
+override via the merge button, just not via `git push origin main`.
 
 ## Versioning
 
