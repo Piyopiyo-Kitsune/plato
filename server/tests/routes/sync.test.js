@@ -458,4 +458,23 @@ describe('POST /v1/sync/lesson-started', () => {
     });
     assert.equal(res.status, 403, 'must reject write when asUserId is present');
   });
+
+  it('accepts optional coachDirective field', async () => {
+    const app = new Hono();
+    app.route('/', sync);
+    const res = await authedReq(app, 'POST', '/v1/sync/lesson-started', {
+      lessonId: 'test-lesson',
+      lesson: {
+        name: 'Test',
+        markdown: '# Test',
+        exemplar: 'Learn WordPress',
+        learningObjectives: ['Understand hooks'],
+        coachDirective: 'Point learners to the Block Editor Handbook',
+      },
+      lessonKB: { status: 'active' },
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.enrichments), 'enrichments must be an array');
+  });
 });

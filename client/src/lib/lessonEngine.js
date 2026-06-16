@@ -178,6 +178,7 @@ export async function startLesson(lessonId, lesson, onStream, onProgress) {
           markdown: lesson.markdown,
           exemplar: lesson.exemplar,
           learningObjectives: lesson.learningObjectives,
+          coachDirective: lesson.coachDirective,
         },
         lessonKB,
       }),

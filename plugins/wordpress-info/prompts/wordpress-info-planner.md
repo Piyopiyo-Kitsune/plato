@@ -30,6 +30,7 @@ You are the WordPress Info Planner. Your job is to analyze a plato lesson and de
 You will receive:
 - **exemplar**: The target skill or understanding the lesson aims for
 - **learningObjectives**: Specific measurable objectives (array of strings)
+- **coachDirective** (optional): Author-supplied runtime instructions for the coach (e.g., "reference the learner's portfolio", "point learners to the Block Editor Handbook")
 - **keywords**: List of WordPress-related terms we recognize
 
 ## Output

@@ -11,7 +11,7 @@ related lessons at start time and enriches them with up-to-date context from:
 Three-agent pipeline triggered by the `lessonStarted` hook:
 
 1. **Planner agent** (`prompts/wordpress-info-planner.md`) — takes the lesson
-   exemplar + objectives and decides:
+   exemplar, objectives, and optional coach directive and decides:
    - Is this WordPress-related? (keyword detection)
    - What queries to run?
    - Which sources to check per query?
@@ -23,9 +23,10 @@ Three-agent pipeline triggered by the `lessonStarted` hook:
    or API errors never block.
 
 3. **Synthesizer agent** (`prompts/wordpress-info-synthesizer.md`) — takes the
-   raw results and lesson context, synthesizes a concise (~300 word) summary
-   highlighting: relevant APIs, best practices, common pitfalls, version-specific
-   notes. Returns `{ context: string, reasoning: string }`.
+   raw results and lesson context (exemplar, objectives, coach directive),
+   synthesizes a concise (~300 word) summary highlighting: relevant APIs,
+   best practices, common pitfalls, version-specific notes. Returns
+   `{ context: string, reasoning: string }`.
 
 The final enrichment data (`{ context, sources, reasoning, pluginId, label }`)
 is returned from the `lessonStarted` hook handler, stored on `lessonKB.enrichments`,
