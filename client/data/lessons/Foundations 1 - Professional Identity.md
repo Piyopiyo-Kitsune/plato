@@ -1,9 +1,9 @@
 # Foundations 1: Professional Identity
 
-A Slack message that authentically reflects who you are in a way that makes you distinctly memorable among 200+ peers.
+A professional introduction that authentically reflects who you are in a way that makes you distinctly memorable.
 
 ## Exemplar
-A Slack message that authentically reflects who they are — drawing on their real professional experiences and values — in a way that makes them distinctly memorable among 200+ peers. The message uses plain language, proper grammar, and reveals something genuine and unique about the person.
+A professional introduction that authentically reflects who they are — drawing on their real professional experiences and values — in a way that makes them distinctly memorable. The message uses plain language, proper grammar, and reveals something genuine and unique about the person.
 
 ## Learning Objectives
 - Can reflect on professional experiences and extract meaning that connects to their professional identity
