@@ -15,11 +15,10 @@ import { executeQueries } from './query-executor.js';
 // Import server-side AI provider
 import ai from '../../../server/src/lib/ai-provider.js';
 
-// Model for plugin agents. Use Sonnet 4.6 for planning and synthesis —
-// these are single-turn analytical tasks that benefit from the stronger model.
-// Maps to us.anthropic.claude-sonnet-4-6 in Bedrock (prod) and works
-// directly via Anthropic API (dev).
-const PLUGIN_MODEL = 'claude-sonnet-4-6';
+// Models for plugin agents. Haiku for the planner (simple keyword detection +
+// query building), Sonnet for the synthesizer (distilling docs into lesson context).
+const PLUGIN_MODEL_LIGHT = 'claude-haiku-4-5-20251001'; // Fast, cheap keyword detection
+const PLUGIN_MODEL_HEAVY = 'claude-sonnet-4-6';         // Quality synthesis
 
 const PLANNER_SCHEMA = {
   type: 'object',
@@ -71,12 +70,12 @@ async function loadPrompt(name) {
 /**
  * Call an agent with structured output. Returns the parsed JSON object.
  */
-async function callAgentWithSchema(promptName, context, schema) {
+async function callAgentWithSchema(promptName, context, schema, model) {
   const prompt = await loadPrompt(promptName);
   const fullPrompt = `${prompt}\n\n${context}`;
 
   // Call AI provider directly (server-side)
-  const response = await ai.invoke(PLUGIN_MODEL, {
+  const response = await ai.invoke(model, {
     max_tokens: 2048,
     messages: [{ role: 'user', content: fullPrompt }],
   });
@@ -138,7 +137,7 @@ ${lesson.coachDirective ? `**Coach Directive:**\n${lesson.coachDirective}\n` : '
 Analyze this lesson and decide whether to enrich it with WordPress documentation.
 `;
 
-    const plan = await callAgentWithSchema('wordpress-info-planner', plannerContext, PLANNER_SCHEMA);
+    const plan = await callAgentWithSchema('wordpress-info-planner', plannerContext, PLANNER_SCHEMA, PLUGIN_MODEL_LIGHT);
 
     if (!plan || !plan.shouldEnrich || !plan.queries || !plan.queries.length) {
       // Not WordPress-related — mark scan complete, skip remaining steps
@@ -189,7 +188,7 @@ ${resultsText}
 Synthesize a concise, lesson-specific context note (~300 words).
 `;
 
-    const synthesis = await callAgentWithSchema('wordpress-info-synthesizer', synthesizerContext, SYNTHESIZER_SCHEMA);
+    const synthesis = await callAgentWithSchema('wordpress-info-synthesizer', synthesizerContext, SYNTHESIZER_SCHEMA, PLUGIN_MODEL_HEAVY);
     if (!synthesis || !synthesis.context) {
       reportProgress('synthesize-context', 'failed');
       return null;
