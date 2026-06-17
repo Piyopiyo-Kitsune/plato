@@ -84,6 +84,19 @@ Allows a plugin to enrich lessons at start time by providing additional context,
 
 **Contract:** Enrichments are informational only — they provide reference material the coach can draw on but MUST NOT override completion semantics. The coach (`applyCoachResponseToKB`) remains the single owner of progress and completion.
 
+**Calling the AI from a lessonEnrichment plugin:** Import `ai` and the model constants from the host's `ai-provider.js`. Never hardcode model strings — use `MODEL_LIGHT` (Haiku, fast/cheap, for classification/planning) or `MODEL_HEAVY` (Sonnet, for synthesis/distillation):
+
+```js
+import ai, { MODEL_LIGHT, MODEL_HEAVY } from '../../../server/src/lib/ai-provider.js';
+
+const result = await ai.invoke(MODEL_HEAVY, {
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: prompt }],
+});
+```
+
+This works with both Bedrock (production) and the Anthropic API (local dev) — the host selects the provider based on environment variables.
+
 Phase 1 (available).
 
 ## Pattern capabilities
