@@ -70,6 +70,15 @@ The `Stage` parameter controls DynamoDB table name prefixes and SSM parameter pa
 
 For production deployments, we recommend automating deploys from a **private fork** via GitHub Actions. This keeps your AWS credentials and deploy config out of the public repo. The flow here uses `repository_dispatch`: pushing to the public repo fires a dispatch event to the private fork, which runs the actual deploy. No manual pushing to the deploy remote, and the deploy workflows never need to exist in the public repo.
 
+> **⚠️ Migration note (June 2026)**: If your private fork's `.github/workflows/deploy.yml` copies `client/data`, remove that reference. PR #288 deleted `client/data/` — only `client/prompts` is needed now. Update the `cp` command from:
+> ```bash
+> cp -r client/prompts client/data server/.aws-sam/build/.../client-content/
+> ```
+> to:
+> ```bash
+> cp -r client/prompts server/.aws-sam/build/.../client-content/
+> ```
+
 **Create a private fork:**
 
 ```bash
