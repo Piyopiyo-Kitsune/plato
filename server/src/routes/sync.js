@@ -292,7 +292,7 @@ sync.delete('/v1/sync/:dataKey', async (c) => {
  *
  * Request body:
  *   - lessonId: string (required)
- *   - lesson: { name, markdown, exemplar, learningObjectives } (required)
+ *   - lesson: { name, markdown, exemplar, learningObjectives, coachDirective? } (required)
  *   - lessonKB: object (required)
  *
  * Response:
@@ -358,6 +358,7 @@ sync.post('/v1/sync/lesson-started', async (c) => {
       markdown: lesson.markdown,
       exemplar: lesson.exemplar,
       learningObjectives: lesson.learningObjectives,
+      coachDirective: lesson.coachDirective,
     },
     lessonKB
   });

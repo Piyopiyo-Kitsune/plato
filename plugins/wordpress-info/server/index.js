@@ -126,6 +126,7 @@ async function onLessonStarted({ userId, lessonId, lesson, lessonKB, onProgress 
 **Learning Objectives:**
 ${(lesson.learningObjectives || []).map(obj => `- ${obj}`).join('\n')}
 
+${lesson.coachDirective ? `**Coach Directive:**\n${lesson.coachDirective}\n` : ''}
 **WordPress Keywords:** ${KEYWORDS.join(', ')}
 
 Analyze this lesson and decide whether to enrich it with WordPress documentation.
@@ -174,6 +175,7 @@ Analyze this lesson and decide whether to enrich it with WordPress documentation
 **Learning Objectives:**
 ${(lesson.learningObjectives || []).map(obj => `- ${obj}`).join('\n')}
 
+${lesson.coachDirective ? `**Coach Directive:**\n${lesson.coachDirective}\n` : ''}
 **Query Results:**
 
 ${resultsText}
