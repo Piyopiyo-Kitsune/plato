@@ -12,7 +12,7 @@
 
 import { KEYWORDS, SOURCES } from './sources.js';
 import { executeQueries } from './query-executor.js';
-import ai, { MODEL_LIGHT, MODEL_HEAVY } from '../../../server/src/lib/ai-provider.js';
+import ai, { LLM } from '../../../server/src/lib/ai-provider.js';
 
 const PLANNER_SCHEMA = {
   type: 'object',
@@ -131,7 +131,7 @@ ${lesson.coachDirective ? `**Coach Directive:**\n${lesson.coachDirective}\n` : '
 Analyze this lesson and decide whether to enrich it with WordPress documentation.
 `;
 
-    const plan = await callAgentWithSchema('wordpress-info-planner', plannerContext, PLANNER_SCHEMA, MODEL_LIGHT);
+    const plan = await callAgentWithSchema('wordpress-info-planner', plannerContext, PLANNER_SCHEMA, LLM);
 
     if (!plan || !plan.shouldEnrich || !plan.queries || !plan.queries.length) {
       // Not WordPress-related — mark scan complete, skip remaining steps
@@ -182,7 +182,7 @@ ${resultsText}
 Synthesize a concise, lesson-specific context note (~300 words).
 `;
 
-    const synthesis = await callAgentWithSchema('wordpress-info-synthesizer', synthesizerContext, SYNTHESIZER_SCHEMA, MODEL_HEAVY);
+    const synthesis = await callAgentWithSchema('wordpress-info-synthesizer', synthesizerContext, SYNTHESIZER_SCHEMA, LLM);
     if (!synthesis || !synthesis.context) {
       reportProgress('synthesize-context', 'failed');
       return null;
