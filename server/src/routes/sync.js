@@ -349,18 +349,28 @@ sync.post('/v1/sync/lesson-started', async (c) => {
 
   // Emit the hook. Plugins with hook.lessonStarted + lessonEnrichment capability
   // can return enrichment data: { context, sources, reasoning, pluginId, label }.
-  // The emit function collects non-null return values from all handlers.
-  const enrichments = await emitHook('lessonStarted', {
-    userId,
-    lessonId,
-    lesson: {
-      name: lesson.name,
-      markdown: lesson.markdown,
-      exemplar: lesson.exemplar,
-      learningObjectives: lesson.learningObjectives,
-      coachDirective: lesson.coachDirective,
-    },
-    lessonKB
+  // Cap at 30s so a slow plugin never holds up lesson start indefinitely —
+  // the client's fail-open handler treats any non-200 as "no enrichment".
+  const ENRICHMENT_TIMEOUT_MS = 30_000;
+  const enrichments = await Promise.race([
+    emitHook('lessonStarted', {
+      userId,
+      lessonId,
+      lesson: {
+        name: lesson.name,
+        markdown: lesson.markdown,
+        exemplar: lesson.exemplar,
+        learningObjectives: lesson.learningObjectives,
+        coachDirective: lesson.coachDirective,
+      },
+      lessonKB
+    }),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('lessonStarted enrichment timed out')), ENRICHMENT_TIMEOUT_MS)
+    ),
+  ]).catch((err) => {
+    logger.error('lesson_enrichment_timeout', { lessonId, error: err?.message });
+    return [];
   });
 
   return c.json({
