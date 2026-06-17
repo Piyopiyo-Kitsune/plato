@@ -1,6 +1,6 @@
 /**
- * Seed default content (prompts, knowledge base) into the database.
- * Reads MD files from client/ at runtime. Called during first-time setup.
+ * Seed system prompts and default theme colors.
+ * Called on first request to bootstrap a new deployment.
  */
 
 import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
