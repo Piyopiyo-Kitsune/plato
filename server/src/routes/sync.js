@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/authenticate.js';
 import { isPublicLessonRecord } from '../lib/lesson-visibility.js';
 import { emit as emitHook } from '../lib/plugins/hooks.js';
 import { pluginRegistry } from '../lib/plugins/registry.js';
+import { logger } from '../lib/logger.js';
 
 const sync = new Hono();
 
