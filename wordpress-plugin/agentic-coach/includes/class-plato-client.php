@@ -67,7 +67,7 @@ class Agentic_Coach_Plato_Client {
 	 */
 	public function mint_embed_code( $lesson_id, $user_id ) {
 		if ( ! $this->settings->is_configured() ) {
-			return new WP_Error( 'agentic_coach_unconfigured', __( 'The Agentic Coach is not configured.', 'agentic-coach' ) );
+			return new WP_Error( 'agentic_coach_unconfigured', __( 'The WordPress Coach is not configured.', 'agentic-coach' ) );
 		}
 
 		$user = get_userdata( $user_id );
@@ -141,7 +141,7 @@ class Agentic_Coach_Plato_Client {
 	 */
 	public function publish_lesson( array $args ) {
 		if ( ! $this->settings->is_configured() ) {
-			return new WP_Error( 'agentic_coach_unconfigured', __( 'The Agentic Coach is not configured.', 'agentic-coach' ) );
+			return new WP_Error( 'agentic_coach_unconfigured', __( 'The WordPress Coach is not configured.', 'agentic-coach' ) );
 		}
 		$site_id = $this->settings->site_id();
 		$ts      = time();
@@ -171,7 +171,7 @@ class Agentic_Coach_Plato_Client {
 	 */
 	public function forget_user( $user_id ) {
 		if ( ! $this->settings->is_configured() ) {
-			return new WP_Error( 'agentic_coach_unconfigured', __( 'The Agentic Coach is not configured.', 'agentic-coach' ) );
+			return new WP_Error( 'agentic_coach_unconfigured', __( 'The WordPress Coach is not configured.', 'agentic-coach' ) );
 		}
 		$site_id    = $this->settings->site_id();
 		$wp_user_id = (string) $user_id;

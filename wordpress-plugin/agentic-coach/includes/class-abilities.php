@@ -71,7 +71,7 @@ class Agentic_Coach_Abilities {
 		wp_register_ability_category(
 			self::CATEGORY,
 			array(
-				'label'       => __( 'Agentic Coach', 'agentic-coach' ),
+				'label'       => __( 'WordPress Coach', 'agentic-coach' ),
 				'description' => __( 'Lesson and course context for the Plato coach.', 'agentic-coach' ),
 			)
 		);
@@ -100,7 +100,7 @@ class Agentic_Coach_Abilities {
 			array(
 				'category'            => self::CATEGORY,
 				'label'               => __( 'List coaching courses', 'agentic-coach' ),
-				'description'         => __( 'Returns Agentic Coach courses on this site.', 'agentic-coach' ),
+				'description'         => __( 'Returns WordPress Coach courses on this site.', 'agentic-coach' ),
 				'input_schema'        => array(
 					'type'       => 'object',
 					'properties' => array(),

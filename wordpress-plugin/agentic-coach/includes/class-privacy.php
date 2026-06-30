@@ -48,8 +48,8 @@ class Agentic_Coach_Privacy {
 		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
 			return;
 		}
-		$content = __( 'When you use an embedded Agentic Coach, your coaching conversation and progress are processed by the connected Plato service under a pseudonymous identifier derived from your account. Your email address is only shared if the site administrator has enabled it.', 'agentic-coach' );
-		wp_add_privacy_policy_content( __( 'Agentic Coach', 'agentic-coach' ), wp_kses_post( wpautop( $content ) ) );
+		$content = __( 'When you use an embedded WordPress Coach, your coaching conversation and progress are processed by the connected Plato service under a pseudonymous identifier derived from your account. Your email address is only shared if the site administrator has enabled it.', 'agentic-coach' );
+		wp_add_privacy_policy_content( __( 'WordPress Coach', 'agentic-coach' ), wp_kses_post( wpautop( $content ) ) );
 	}
 
 	/**
@@ -60,7 +60,7 @@ class Agentic_Coach_Privacy {
 	 */
 	public function register_exporter( $exporters ) {
 		$exporters['agentic-coach'] = array(
-			'exporter_friendly_name' => __( 'Agentic Coach', 'agentic-coach' ),
+			'exporter_friendly_name' => __( 'WordPress Coach', 'agentic-coach' ),
 			'callback'               => array( $this, 'export' ),
 		);
 		return $exporters;
@@ -74,7 +74,7 @@ class Agentic_Coach_Privacy {
 	 */
 	public function register_eraser( $erasers ) {
 		$erasers['agentic-coach'] = array(
-			'eraser_friendly_name' => __( 'Agentic Coach', 'agentic-coach' ),
+			'eraser_friendly_name' => __( 'WordPress Coach', 'agentic-coach' ),
 			'callback'             => array( $this, 'erase' ),
 		);
 		return $erasers;
@@ -92,7 +92,7 @@ class Agentic_Coach_Privacy {
 		if ( $user ) {
 			$data[] = array(
 				'group_id'    => 'agentic-coach',
-				'group_label' => __( 'Agentic Coach', 'agentic-coach' ),
+				'group_label' => __( 'WordPress Coach', 'agentic-coach' ),
 				'item_id'     => 'agentic-coach-' . $user->ID,
 				'data'        => array(
 					array(

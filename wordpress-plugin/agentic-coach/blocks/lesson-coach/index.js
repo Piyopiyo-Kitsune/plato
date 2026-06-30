@@ -1,5 +1,5 @@
 /**
- * Editor UI for the Agentic Coach block.
+ * Editor UI for the WordPress Coach block.
  *
  * Dependency-light (no JSX build step): uses the global `wp` packages enqueued
  * as script dependencies, so it runs in wp-env without compilation.
@@ -123,7 +123,7 @@
 					el(
 						'div',
 						{},
-						el( 'strong', {}, attributes.heading || __( 'Agentic Coach', 'agentic-coach' ) ),
+						el( 'strong', {}, attributes.heading || __( 'WordPress Coach', 'agentic-coach' ) ),
 						el(
 							'p',
 							{},

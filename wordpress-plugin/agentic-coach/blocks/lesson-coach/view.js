@@ -1,5 +1,5 @@
 /**
- * Front-end runtime for the Agentic Coach block.
+ * Front-end runtime for the WordPress Coach block.
  *
  * Fetches a single-use embed URL from the WordPress REST proxy (which talks to
  * Plato server-side, so no secret is exposed), then mounts a sandboxed iframe
@@ -34,7 +34,7 @@
 		var lessonId = mount.getAttribute( 'data-lesson' );
 		var endpoint = mount.getAttribute( 'data-endpoint' );
 		var nonce = mount.getAttribute( 'data-nonce' );
-		var frameTitle = mount.getAttribute( 'data-frame-title' ) || 'Agentic Coach';
+		var frameTitle = mount.getAttribute( 'data-frame-title' ) || 'WordPress Coach';
 		var platoOrigin = originOf( platoUrl );
 
 		fetch( endpoint, {

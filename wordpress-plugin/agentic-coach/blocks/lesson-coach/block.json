@@ -3,7 +3,7 @@
 	"apiVersion": 3,
 	"name": "agentic-coach/lesson-coach",
 	"version": "0.1.0",
-	"title": "Agentic Coach",
+	"title": "WordPress Coach",
 	"category": "embed",
 	"icon": "welcome-learn-more",
 	"description": "Embed a Plato-powered agentic coach into a lesson.",

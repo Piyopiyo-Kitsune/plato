@@ -68,8 +68,8 @@ class Agentic_Coach_Settings {
 	public function add_network_menu() {
 		add_submenu_page(
 			'settings.php',
-			__( 'Agentic Coach', 'agentic-coach' ),
-			__( 'Agentic Coach', 'agentic-coach' ),
+			__( 'WordPress Coach', 'agentic-coach' ),
+			__( 'WordPress Coach', 'agentic-coach' ),
 			self::capability(),
 			'agentic-coach',
 			array( $this, 'render_page' )
@@ -231,7 +231,7 @@ class Agentic_Coach_Settings {
 		$updated    = isset( $_GET['updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only notice flag.
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Agentic Coach Settings', 'agentic-coach' ); ?></h1>
+			<h1><?php esc_html_e( 'WordPress Coach Settings', 'agentic-coach' ); ?></h1>
 			<?php if ( $updated ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'agentic-coach' ); ?></p></div>
 			<?php endif; ?>

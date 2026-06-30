@@ -1,4 +1,4 @@
-=== Agentic Coach ===
+=== WordPress Coach ===
 Contributors: plato
 Tags: ai, learning, lms, coach, mcp
 Requires at least: 6.5
@@ -12,10 +12,10 @@ Embed a Plato-powered agentic learning coach into WordPress lessons.
 
 == Description ==
 
-Agentic Coach connects WordPress to a Plato deployment so you can:
+WordPress Coach connects WordPress to a Plato deployment so you can:
 
 * Author coaching courses, modules, and lessons in WordPress.
-* Embed a live, Plato-powered agentic coach into any lesson with the **Agentic Coach** block — similar in spirit to embedding WordPress Playground.
+* Embed a live, Plato-powered agentic coach into any lesson with the **WordPress Coach** block — similar in spirit to embedding WordPress Playground.
 * Get lightweight in-editor AI help while drafting lessons (via the WordPress AI Client on WordPress 7.0+).
 * Let the coach read live lesson/course context over MCP (via the WordPress MCP Adapter and Abilities API).
 

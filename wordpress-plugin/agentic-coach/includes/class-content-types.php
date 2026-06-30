@@ -75,7 +75,7 @@ class Agentic_Coach_Content_Types {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'WordPress Coach', 'agentic-coach' ); ?></h1>
-			<p><?php esc_html_e( 'Author agentic coaching content, then embed it into lessons with the Agentic Coach block.', 'agentic-coach' ); ?></p>
+			<p><?php esc_html_e( 'Author agentic coaching content, then embed it into lessons with the WordPress Coach block.', 'agentic-coach' ); ?></p>
 			<h2 class="screen-reader-text"><?php esc_html_e( 'Content areas', 'agentic-coach' ); ?></h2>
 			<ul class="ul-disc">
 				<?php foreach ( $links as $type => $label ) : ?>

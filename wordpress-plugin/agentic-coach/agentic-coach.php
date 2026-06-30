@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Agentic Coach
+ * Plugin Name:       WordPress Coach
  * Plugin URI:        https://github.com/Piyopiyo-Kitsune/plato
  * Description:       Embed a Plato-powered agentic learning coach into WordPress lessons, author coaching content in the editor, and expose lesson context to the coach over MCP.
  * Version:           0.1.0

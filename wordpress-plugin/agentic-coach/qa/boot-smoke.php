@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin boot harness: load the real Agentic Coach plugin against a stubbed
+ * Plugin boot harness: load the real WordPress Coach plugin against a stubbed
  * WordPress API, fire init/rest_api_init, and assert it wires up with no fatals.
  */
 error_reporting( E_ALL & ~E_DEPRECATED );

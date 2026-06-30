@@ -1,6 +1,6 @@
 <?php
 /**
- * Uninstall cleanup for Agentic Coach.
+ * Uninstall cleanup for WordPress Coach.
  *
  * Removes plugin settings. Course/module/lesson content is intentionally left
  * in place so it is not lost on an accidental uninstall.

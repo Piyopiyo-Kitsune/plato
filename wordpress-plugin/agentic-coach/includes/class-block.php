@@ -1,6 +1,6 @@
 <?php
 /**
- * The learner-facing "Agentic Coach" dynamic block.
+ * The learner-facing "WordPress Coach" dynamic block.
  *
  * @package AgenticCoach
  */
@@ -105,7 +105,7 @@ class Agentic_Coach_Block {
 			<?php endif; ?>
 			<?php
 			if ( ! $this->settings->is_configured() ) {
-				$this->render_notice( __( 'The Agentic Coach is not configured yet.', 'agentic-coach' ), current_user_can( 'manage_options' ) );
+				$this->render_notice( __( 'The WordPress Coach is not configured yet.', 'agentic-coach' ), current_user_can( 'manage_options' ) );
 			} elseif ( ! $plato_lesson_id ) {
 				$this->render_notice( __( 'This lesson has not been published to Plato yet.', 'agentic-coach' ), current_user_can( 'edit_posts' ) );
 			} elseif ( ! is_user_logged_in() ) {
@@ -143,7 +143,7 @@ class Agentic_Coach_Block {
 			<div class="agentic-coach__status" role="status" aria-live="polite">
 				<?php esc_html_e( 'Loading your coach…', 'agentic-coach' ); ?>
 			</div>
-			<noscript><?php esc_html_e( 'JavaScript is required to use the Agentic Coach.', 'agentic-coach' ); ?></noscript>
+			<noscript><?php esc_html_e( 'JavaScript is required to use the WordPress Coach.', 'agentic-coach' ); ?></noscript>
 		</div>
 		<?php
 	}

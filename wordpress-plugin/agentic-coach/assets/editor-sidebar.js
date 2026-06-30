@@ -139,11 +139,11 @@
 				el(
 					PluginSidebarMoreMenuItem,
 					{ target: 'agentic-coach-sidebar' },
-					__( 'Agentic Coach', 'agentic-coach' )
+					__( 'WordPress Coach', 'agentic-coach' )
 				),
 				el(
 					PluginSidebar,
-					{ name: 'agentic-coach-sidebar', title: __( 'Agentic Coach', 'agentic-coach' ) },
+					{ name: 'agentic-coach-sidebar', title: __( 'WordPress Coach', 'agentic-coach' ) },
 					el( wp.element.Fragment, {}, el( PublishToPlato, {} ), el( SidebarContent, {} ) )
 				)
 			);
