@@ -28,7 +28,7 @@ class Agentic_Coach_Settings {
 			add_action( 'network_admin_menu', array( $this, 'add_network_menu' ) );
 			add_action( 'network_admin_edit_agentic_coach_save', array( $this, 'handle_save' ) );
 		} else {
-			add_action( 'admin_menu', array( $this, 'add_menu' ) );
+			add_action( 'admin_menu', array( $this, 'add_menu' ), 11 );
 			add_action( 'admin_post_agentic_coach_save', array( $this, 'handle_save' ) );
 		}
 	}
@@ -48,9 +48,12 @@ class Agentic_Coach_Settings {
 	 * @return void
 	 */
 	public function add_menu() {
-		add_options_page(
-			__( 'Agentic Coach', 'agentic-coach' ),
-			__( 'Agentic Coach', 'agentic-coach' ),
+		// Nest under the "WordPress Coach" menu for discoverability. Registered at
+		// priority 11 so the parent (Content_Types, priority 9) already exists.
+		add_submenu_page(
+			Agentic_Coach_Content_Types::MENU_SLUG,
+			__( 'Settings', 'agentic-coach' ),
+			__( 'Settings', 'agentic-coach' ),
 			self::capability(),
 			'agentic-coach',
 			array( $this, 'render_page' )
@@ -228,10 +231,19 @@ class Agentic_Coach_Settings {
 		$updated    = isset( $_GET['updated'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only notice flag.
 		?>
 		<div class="wrap">
-			<h1><?php esc_html_e( 'Agentic Coach', 'agentic-coach' ); ?></h1>
+			<h1><?php esc_html_e( 'Agentic Coach Settings', 'agentic-coach' ); ?></h1>
 			<?php if ( $updated ) : ?>
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'agentic-coach' ); ?></p></div>
 			<?php endif; ?>
+			<p>
+				<?php esc_html_e( 'These settings connect WordPress to your Plato server. For security, the AI provider key (e.g. Anthropic or Amazon Bedrock) that powers the coach is configured in Plato — not here — so it is never exposed to WordPress or the browser.', 'agentic-coach' ); ?>
+			</p>
+			<div class="notice notice-info inline">
+				<p>
+					<strong><?php esc_html_e( 'Where is the AI API key?', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'Set it on the Plato server: ANTHROPIC_API_KEY (or AI_PROVIDER=bedrock with AWS credentials) in Plato\'s environment. The only secret stored here is the bridge shared secret used to authenticate WordPress to Plato.', 'agentic-coach' ); ?>
+				</p>
+			</div>
 			<form method="post" action="<?php echo esc_url( $action_url ); ?>">
 				<input type="hidden" name="action" value="agentic_coach_save" />
 				<?php wp_nonce_field( 'agentic_coach_save', 'agentic_coach_nonce' ); ?>
