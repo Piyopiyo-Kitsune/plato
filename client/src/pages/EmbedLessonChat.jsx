@@ -85,7 +85,7 @@ export default function EmbedLessonChat() {
   }, [status]);
 
   return (
-    <div ref={containerRef} className="plato-embed-root min-h-dvh bg-stone-100 dark:bg-stone-900">
+    <div ref={containerRef} className="plato-embed-root h-dvh overflow-hidden bg-stone-100 dark:bg-stone-900">
       {status === 'authenticating' && (
         <main className="flex min-h-dvh items-center justify-center" role="status" aria-live="polite">
           <span
@@ -107,7 +107,10 @@ export default function EmbedLessonChat() {
 
       {status === 'ready' && (
         <BrandingProvider>
-          <main id="main-content" className="mx-auto max-w-3xl px-4" tabIndex={-1}>
+          {/* Fixed-height internal scroll container: keeps the coach's
+              auto-scroll-to-latest inside the embed so it never scrolls the
+              host WordPress page. */}
+          <main id="main-content" className="mx-auto h-full max-w-3xl overflow-y-auto px-4" tabIndex={-1}>
             <LessonChat />
           </main>
         </BrandingProvider>

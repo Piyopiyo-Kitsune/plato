@@ -73,19 +73,17 @@
 		// Same-origin is needed for Plato's own app state; scripts/forms for chat.
 		iframe.setAttribute( 'sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups' );
 		iframe.style.width = '100%';
-		iframe.style.minHeight = '640px';
 		iframe.style.border = '0';
 
-		// Resize to the height Plato reports — only from the Plato origin.
-		window.addEventListener( 'message', function ( event ) {
-			if ( platoOrigin && event.origin !== platoOrigin ) {
-				return;
-			}
-			var payload = event.data;
-			if ( payload && payload.type === 'plato:embed:resize' && typeof payload.height === 'number' ) {
-				iframe.style.height = Math.max( payload.height, 480 ) + 'px';
-			}
-		} );
+		// Fixed, viewport-bounded height. The coach scrolls INSIDE the iframe, so a
+		// streaming reply never scrolls the host page. (A full-height iframe has no
+		// internal scroll, which is what made the page jump as the coach typed.)
+		var applyHeight = function () {
+			var vh = window.innerHeight || 800;
+			iframe.style.height = Math.max( 480, Math.min( 720, Math.round( vh * 0.8 ) ) ) + 'px';
+		};
+		applyHeight();
+		window.addEventListener( 'resize', applyHeight );
 
 		var status = mount.querySelector( '.agentic-coach__status' );
 		if ( status ) {
