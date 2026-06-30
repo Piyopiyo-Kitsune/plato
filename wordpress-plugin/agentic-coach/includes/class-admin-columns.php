@@ -37,6 +37,9 @@ class Agentic_Coach_Admin_Columns {
 		foreach ( array( $lesson, $module, $course ) as $type ) {
 			add_filter( "manage_edit-{$type}_sortable_columns", array( $this, 'sortable_columns' ) );
 		}
+
+		add_action( 'restrict_manage_posts', array( $this, 'render_filters' ) );
+		add_action( 'pre_get_posts', array( $this, 'filter_and_sort' ) );
 	}
 
 	/**
@@ -156,10 +159,10 @@ class Agentic_Coach_Admin_Columns {
 	public function render_course_column( $column, $post_id ) {
 		switch ( $column ) {
 			case 'agentic_modules':
-				echo (int) $this->count_related( Agentic_Coach_Content_Types::MODULE, $post_id );
+				echo wp_kses_post( $this->count_link( Agentic_Coach_Content_Types::MODULE, $post_id ) );
 				break;
 			case 'agentic_lessons':
-				echo (int) $this->count_related( Agentic_Coach_Content_Types::LESSON, $post_id );
+				echo wp_kses_post( $this->count_link( Agentic_Coach_Content_Types::LESSON, $post_id ) );
 				break;
 			case 'agentic_modified':
 				echo esc_html( $this->modified( $post_id ) );
@@ -168,14 +171,175 @@ class Agentic_Coach_Admin_Columns {
 	}
 
 	/**
-	 * Make the Last Modified column sortable (maps to the built-in `modified`).
+	 * A related-count rendered as a link to the pre-filtered list (or plain 0).
+	 *
+	 * @param string $post_type Related post type (module or lesson).
+	 * @param int    $course_id Course post id.
+	 * @return string
+	 */
+	private function count_link( $post_type, $course_id ) {
+		$count = $this->count_related( $post_type, $course_id );
+		if ( ! $count ) {
+			return '0';
+		}
+		$url = add_query_arg(
+			array(
+				'post_type'             => $post_type,
+				'agentic_course_filter' => $course_id,
+			),
+			admin_url( 'edit.php' )
+		);
+		return '<a href="' . esc_url( $url ) . '">' . (int) $count . '</a>';
+	}
+
+	/**
+	 * Make Last Modified, Course, and Module columns sortable. `modified` maps to
+	 * the core orderby; course/module are handled in filter_and_sort().
 	 *
 	 * @param array $columns Sortable columns.
 	 * @return array
 	 */
 	public function sortable_columns( $columns ) {
 		$columns['agentic_modified'] = 'modified';
+		$columns['agentic_course']   = 'agentic_course';
+		$columns['agentic_module']   = 'agentic_module';
 		return $columns;
+	}
+
+	/**
+	 * Render Course (and, for lessons, Module) filter dropdowns above the list.
+	 *
+	 * @param string $post_type Current list post type.
+	 * @return void
+	 */
+	public function render_filters( $post_type ) {
+		if ( Agentic_Coach_Content_Types::LESSON !== $post_type && Agentic_Coach_Content_Types::MODULE !== $post_type ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigational read-only filter.
+		$current_course = isset( $_GET['agentic_course_filter'] ) ? absint( $_GET['agentic_course_filter'] ) : 0;
+		$this->dropdown(
+			'agentic_course_filter',
+			__( 'Filter by course', 'agentic-coach' ),
+			__( 'All courses', 'agentic-coach' ),
+			$this->posts_for_filter( Agentic_Coach_Content_Types::COURSE ),
+			$current_course
+		);
+
+		if ( Agentic_Coach_Content_Types::LESSON === $post_type ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigational read-only filter.
+			$current_module = isset( $_GET['agentic_module_filter'] ) ? absint( $_GET['agentic_module_filter'] ) : 0;
+			$this->dropdown(
+				'agentic_module_filter',
+				__( 'Filter by module', 'agentic-coach' ),
+				__( 'All modules', 'agentic-coach' ),
+				$this->posts_for_filter( Agentic_Coach_Content_Types::MODULE ),
+				$current_module
+			);
+		}
+	}
+
+	/**
+	 * Echo a labeled filter dropdown.
+	 *
+	 * @param string $name     Field name.
+	 * @param string $label    Accessible label.
+	 * @param string $all      "All" option label.
+	 * @param array  $posts    Posts to list.
+	 * @param int    $selected Currently selected id.
+	 * @return void
+	 */
+	private function dropdown( $name, $label, $all, $posts, $selected ) {
+		echo '<label class="screen-reader-text" for="' . esc_attr( $name ) . '">' . esc_html( $label ) . '</label>';
+		echo '<select name="' . esc_attr( $name ) . '" id="' . esc_attr( $name ) . '">';
+		echo '<option value="0">' . esc_html( $all ) . '</option>';
+		foreach ( $posts as $post ) {
+			printf(
+				'<option value="%d" %s>%s</option>',
+				(int) $post->ID,
+				selected( $selected, $post->ID, false ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- selected() returns a safe attribute string.
+				esc_html( $post->post_title )
+			);
+		}
+		echo '</select>';
+	}
+
+	/**
+	 * Apply course/module filters and course/module sorting to the admin list.
+	 *
+	 * @param WP_Query $query Query.
+	 * @return void
+	 */
+	public function filter_and_sort( $query ) {
+		if ( ! is_admin() || ! $query->is_main_query() ) {
+			return;
+		}
+		$post_type = $query->get( 'post_type' );
+		if ( Agentic_Coach_Content_Types::LESSON !== $post_type && Agentic_Coach_Content_Types::MODULE !== $post_type ) {
+			return;
+		}
+
+		$meta_query = array();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigational read-only filter.
+		$course_filter = isset( $_GET['agentic_course_filter'] ) ? absint( $_GET['agentic_course_filter'] ) : 0;
+		if ( $course_filter ) {
+			$meta_query['course_filter'] = array(
+				'key'   => '_agentic_course',
+				'value' => $course_filter,
+			);
+		}
+
+		if ( Agentic_Coach_Content_Types::LESSON === $post_type ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- navigational read-only filter.
+			$module_filter = isset( $_GET['agentic_module_filter'] ) ? absint( $_GET['agentic_module_filter'] ) : 0;
+			if ( $module_filter ) {
+				$meta_query['module_filter'] = array(
+					'key'   => '_agentic_module',
+					'value' => $module_filter,
+				);
+			}
+		}
+
+		$orderby = $query->get( 'orderby' );
+		$order   = strtoupper( $query->get( 'order' ) ) === 'DESC' ? 'DESC' : 'ASC';
+		if ( 'agentic_course' === $orderby ) {
+			$meta_query['course_sort'] = array(
+				'key'     => '_agentic_course',
+				'compare' => 'EXISTS',
+			);
+			$query->set( 'orderby', array( 'course_sort' => $order ) );
+		} elseif ( 'agentic_module' === $orderby ) {
+			$meta_query['module_sort'] = array(
+				'key'     => '_agentic_module',
+				'compare' => 'EXISTS',
+			);
+			$query->set( 'orderby', array( 'module_sort' => $order ) );
+		}
+
+		if ( $meta_query ) {
+			$query->set( 'meta_query', $meta_query ); // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- admin list filtering.
+		}
+	}
+
+	/**
+	 * Posts of a type for a filter dropdown, ordered by title.
+	 *
+	 * @param string $post_type Post type.
+	 * @return WP_Post[]
+	 */
+	private function posts_for_filter( $post_type ) {
+		return get_posts(
+			array(
+				'post_type'      => $post_type,
+				'post_status'    => array( 'publish', 'draft', 'pending', 'future' ),
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+				'posts_per_page' => 200, // phpcs:ignore WordPress.WP.PostsPerPage.posts_per_page_posts_per_page -- bounded authoring set.
+				'no_found_rows'  => true,
+			)
+		);
 	}
 
 	/**
