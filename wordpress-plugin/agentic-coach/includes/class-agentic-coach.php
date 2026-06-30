@@ -53,6 +53,7 @@ final class Agentic_Coach {
 		require_once $dir . 'class-settings.php';
 		require_once $dir . 'class-plato-client.php';
 		require_once $dir . 'class-content-types.php';
+		require_once $dir . 'class-admin-columns.php';
 		require_once $dir . 'class-rest.php';
 		require_once $dir . 'class-sync.php';
 		require_once $dir . 'class-block.php';
@@ -75,6 +76,7 @@ final class Agentic_Coach {
 
 		$this->settings->register();
 		( new Agentic_Coach_Content_Types() )->register();
+		( new Agentic_Coach_Admin_Columns() )->register();
 		( new Agentic_Coach_REST( $this->settings, $this->plato ) )->register();
 		( new Agentic_Coach_Sync( $this->plato ) )->register();
 		( new Agentic_Coach_Block( $this->settings ) )->register();
