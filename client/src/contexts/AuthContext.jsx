@@ -53,6 +53,21 @@ export function AuthProvider({ children }) {
     setUser(u);
   }, []);
 
+  // Re-read auth state from storage and update the context. Used by the
+  // WordPress embed (EmbedLessonChat) after it exchanges a one-time bridge
+  // code for tokens, so the app boots logged-in without a full reload.
+  // Returns the resulting logged-in boolean.
+  const hydrateSession = useCallback(async () => {
+    const result = await authModule.isLoggedIn();
+    setLoggedIn(result);
+    if (result) {
+      const u = await authModule.getCurrentUser();
+      setUser(u);
+    }
+    setLoading(false);
+    return result;
+  }, []);
+
   const logout = useCallback(async () => {
     // Always exit impersonation before logging out so the next session
     // doesn't inherit a stale view.
@@ -110,7 +125,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      loggedIn, user, loading, login, logout, refreshUser, sessionExpired,
+      loggedIn, user, loading, login, logout, refreshUser, hydrateSession, sessionExpired,
       impersonatedUser, startImpersonation, stopImpersonation,
     }}>
       {children}

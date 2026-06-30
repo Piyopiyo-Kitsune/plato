@@ -2,8 +2,17 @@ import { Hono } from 'hono';
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
+import { BRIDGE_ALLOWED_SITES } from '../config.js';
 
 const app = new Hono();
+
+// Clickjacking hygiene for the WordPress embed: restrict who may frame the
+// /embed/* view to the configured WordPress site(s). Empty allowlist (local
+// dev) permits any ancestor so the embed still works without configuration.
+function embedFrameAncestors() {
+  const sites = BRIDGE_ALLOWED_SITES.split(',').map((s) => s.trim()).filter(Boolean);
+  return sites.length ? `'self' ${sites.join(' ')}` : '*';
+}
 
 // ── Serve React client from built files ──
 
@@ -87,6 +96,10 @@ app.get('*', (c) => {
   if (!indexHtml) return c.text('Client not built. Run: cd client && npm run build', 500);
   c.header('Content-Type', indexHtml.type);
   c.header('Cache-Control', 'no-cache');
+  // The WordPress block frames /embed/* — scope frame-ancestors to allowed sites.
+  if (c.req.path.startsWith('/embed/')) {
+    c.header('Content-Security-Policy', `frame-ancestors ${embedFrameAncestors()}`);
+  }
   return c.body(indexHtml.content);
 });
 

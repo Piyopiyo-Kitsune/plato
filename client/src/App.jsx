@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext.jsx';
 import AppShell from './components/AppShell.jsx';
 import LessonsList from './pages/LessonsList.jsx';
 import LessonChat from './pages/LessonChat.jsx';
+import EmbedLessonChat from './pages/EmbedLessonChat.jsx';
 import Settings from './pages/Settings.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -94,6 +95,10 @@ export default function App() {
         <Route path="/signup" element={<RequireGuest><Signup /></RequireGuest>} />
         <Route path="/forgot-password" element={<RequireGuest><ForgotPassword /></RequireGuest>} />
         <Route path="/reset-password" element={<RequireGuest><ResetPassword /></RequireGuest>} />
+
+        {/* WordPress embed — authenticates itself via a one-time bridge code,
+            so it sits outside RequireAuth and the classroom AppShell chrome. */}
+        <Route path="/embed/lesson/:lessonGroupId" element={<EmbedLessonChat />} />
 
         <Route path="/plato/*" element={
           <RequireAuth>

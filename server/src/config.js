@@ -20,3 +20,15 @@ export const RESET_TOKEN_TTL_HOURS = 1;
 export const BCRYPT_ROUNDS = 10;
 export const DB_BACKEND = process.env.DB_BACKEND || 'dynamodb';
 export const SQLITE_PATH = process.env.SQLITE_PATH || './data/plato.db';
+
+// WordPress companion-plugin bridge (see server/src/routes/bridge.js).
+// Shared HMAC secret the WordPress plugin signs token-exchange requests with.
+// When empty, the bridge endpoints are disabled (fail closed).
+export const BRIDGE_SHARED_SECRET = process.env.BRIDGE_SHARED_SECRET || '';
+// Optional comma-separated allowlist of WordPress siteIds permitted to use the
+// bridge. Empty means "allow any signed request" (suitable for local dev).
+export const BRIDGE_ALLOWED_SITES = process.env.BRIDGE_ALLOWED_SITES || '';
+// Replay window (seconds) for signed bridge requests, and the lifetime of a
+// one-time embed code returned by /v1/bridge/token.
+export const BRIDGE_CLOCK_SKEW_SECONDS = Number(process.env.BRIDGE_CLOCK_SKEW_SECONDS || 300);
+export const BRIDGE_CODE_TTL_SECONDS = Number(process.env.BRIDGE_CODE_TTL_SECONDS || 90);
