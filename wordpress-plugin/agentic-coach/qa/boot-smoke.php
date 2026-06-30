@@ -31,7 +31,7 @@ function is_user_logged_in() { return true; }
 function did_action( $h ) { return 0; }
 function function_exists_stub() {}
 
-function register_post_type( $type, $args ) { $GLOBALS['cpts'][] = $type; return (object) array( 'name' => $type ); }
+function register_post_type( $type, $args ) { $GLOBALS['cpts'][] = $type; $GLOBALS['cpt_menu'][ $type ] = $args['show_in_menu'] ?? null; return (object) array( 'name' => $type ); }
 function register_post_meta( $type, $key, $args ) { return true; }
 function register_rest_route( $ns, $route, $args ) { $GLOBALS['routes'][] = $ns . $route; return true; }
 function register_block_type( $arg, $args = array() ) {
@@ -48,7 +48,9 @@ function wp_set_script_translations( ...$a ) { return true; }
 function get_current_screen() { return (object) array( 'post_type' => 'agentic_lesson' ); }
 
 function add_options_page( ...$a ) { return true; }
-function add_submenu_page( ...$a ) { return true; }
+function add_menu_page( $page, $menu, $cap, $slug, $cb = null, $icon = '', $pos = null ) { $GLOBALS['menus'][] = $slug; return $slug; }
+function add_submenu_page( $parent, $page, $menu, $cap, $slug, $cb = null ) { $GLOBALS['submenus'][] = $parent . '|' . $slug; return $slug; }
+function admin_url( $p = '' ) { return 'http://example.test/wp-admin/' . $p; }
 function wp_add_privacy_policy_content( ...$a ) { return true; }
 function wpautop( $s ) { return $s; }
 function wp_kses_post( $s ) { return $s; }
@@ -96,6 +98,7 @@ agentic_coach_bootstrap();
 
 // Fire the registration hooks.
 do_action_all( 'init' );
+do_action_all( 'admin_menu' );
 do_action_all( 'rest_api_init' );
 do_action_all( 'enqueue_block_editor_assets' );
 apply_filters_all( 'wp_privacy_personal_data_exporters', array() );
@@ -112,6 +115,10 @@ foreach ( array( 'agentic-coach/v1/embed-token', 'agentic-coach/v1/courses', 'ag
 	check( in_array( $r, $GLOBALS['routes'], true ), "REST route: $r" );
 }
 check( in_array( 'agentic-coach/lesson-coach', $GLOBALS['blocks'], true ), 'block registered: agentic-coach/lesson-coach' );
+check( in_array( 'wordpress-coach', $GLOBALS['menus'] ?? array(), true ), 'parent menu registered: WordPress Coach' );
+foreach ( array( 'agentic_course', 'agentic_module', 'agentic_lesson' ) as $cpt ) {
+	check( ( $GLOBALS['cpt_menu'][ $cpt ] ?? null ) === 'wordpress-coach', "CPT $cpt nests under WordPress Coach" );
+}
 check( ! empty( $GLOBALS['filters']['wp_privacy_personal_data_erasers'] ), 'GDPR eraser filter registered' );
 check( ! empty( $GLOBALS['hooks']['admin_menu'] ), 'settings menu registered (single-site)' );
 

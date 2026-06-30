@@ -17,6 +17,11 @@ class Agentic_Coach_Content_Types {
 	const LESSON = 'agentic_lesson';
 
 	/**
+	 * Slug of the top-level "WordPress Coach" admin menu the CPTs nest under.
+	 */
+	const MENU_SLUG = 'wordpress-coach';
+
+	/**
 	 * Register hooks.
 	 *
 	 * @return void
@@ -24,6 +29,63 @@ class Agentic_Coach_Content_Types {
 	public function register() {
 		add_action( 'init', array( $this, 'register_post_types' ) );
 		add_action( 'init', array( $this, 'register_meta' ) );
+		// Priority 9 so the parent menu exists before WordPress attaches the CPT
+		// submenus (which it does on admin_menu at the default priority).
+		add_action( 'admin_menu', array( $this, 'register_menu' ), 9 );
+	}
+
+	/**
+	 * Register the top-level "WordPress Coach" menu that houses the course,
+	 * module, and lesson screens (each CPT attaches via show_in_menu).
+	 *
+	 * @return void
+	 */
+	public function register_menu() {
+		add_menu_page(
+			__( 'WordPress Coach', 'agentic-coach' ),
+			__( 'WordPress Coach', 'agentic-coach' ),
+			'edit_posts',
+			self::MENU_SLUG,
+			array( $this, 'render_landing' ),
+			'dashicons-welcome-learn-more',
+			26
+		);
+		// Rename the auto-generated first submenu (duplicates the parent title).
+		add_submenu_page(
+			self::MENU_SLUG,
+			__( 'Overview', 'agentic-coach' ),
+			__( 'Overview', 'agentic-coach' ),
+			'edit_posts',
+			self::MENU_SLUG,
+			array( $this, 'render_landing' )
+		);
+	}
+
+	/**
+	 * Render the WordPress Coach overview landing page.
+	 *
+	 * @return void
+	 */
+	public function render_landing() {
+		$links = array(
+			self::COURSE => __( 'Coaching Courses', 'agentic-coach' ),
+			self::MODULE => __( 'Coaching Modules', 'agentic-coach' ),
+			self::LESSON => __( 'Coaching Lessons', 'agentic-coach' ),
+		);
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'WordPress Coach', 'agentic-coach' ); ?></h1>
+			<p><?php esc_html_e( 'Author agentic coaching content, then embed it into lessons with the Agentic Coach block.', 'agentic-coach' ); ?></p>
+			<h2 class="screen-reader-text"><?php esc_html_e( 'Content areas', 'agentic-coach' ); ?></h2>
+			<ul class="ul-disc">
+				<?php foreach ( $links as $type => $label ) : ?>
+					<li>
+						<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . $type ) ); ?>"><?php echo esc_html( $label ); ?></a>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
+		<?php
 	}
 
 	/**
@@ -64,7 +126,7 @@ class Agentic_Coach_Content_Types {
 			),
 			'public'          => false,
 			'show_ui'         => true,
-			'show_in_menu'    => true,
+			'show_in_menu'    => self::MENU_SLUG,
 			'show_in_rest'    => true,
 			'menu_icon'       => $icon,
 			'supports'        => array( 'title', 'editor', 'custom-fields' ),
