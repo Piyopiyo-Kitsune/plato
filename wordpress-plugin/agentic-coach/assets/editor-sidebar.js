@@ -1,0 +1,105 @@
+/**
+ * Authoring sidebar: lightweight AI help while writing a coaching lesson.
+ *
+ * Uses WordPress's native PHP AI Client via the plugin's /author-coach REST
+ * proxy. The full agentic coaching experience lives in Plato.
+ *
+ * @package AgenticCoach
+ */
+( function ( wp ) {
+	'use strict';
+
+	var el = wp.element.createElement;
+	var useState = wp.element.useState;
+	var __ = wp.i18n.__;
+	var apiFetch = wp.apiFetch;
+	var registerPlugin = wp.plugins.registerPlugin;
+	var PluginSidebar = wp.editPost.PluginSidebar;
+	var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
+	var TextareaControl = wp.components.TextareaControl;
+	var Button = wp.components.Button;
+	var Spinner = wp.components.Spinner;
+	var Notice = wp.components.Notice;
+
+	function SidebarContent() {
+		var promptState = useState( '' );
+		var prompt = promptState[ 0 ];
+		var setPrompt = promptState[ 1 ];
+
+		var busyState = useState( false );
+		var busy = busyState[ 0 ];
+		var setBusy = busyState[ 1 ];
+
+		var resultState = useState( '' );
+		var result = resultState[ 0 ];
+		var setResult = resultState[ 1 ];
+
+		var errorState = useState( '' );
+		var error = errorState[ 0 ];
+		var setError = errorState[ 1 ];
+
+		function ask() {
+			setBusy( true );
+			setError( '' );
+			setResult( '' );
+			apiFetch( {
+				path: '/agentic-coach/v1/author-coach',
+				method: 'POST',
+				data: { prompt: prompt },
+			} )
+				.then( function ( data ) {
+					setResult( ( data && data.text ) || '' );
+				} )
+				.catch( function ( err ) {
+					setError( ( err && err.message ) || __( 'Request failed.', 'agentic-coach' ) );
+				} )
+				.finally( function () {
+					setBusy( false );
+				} );
+		}
+
+		return el(
+			'div',
+			{ style: { padding: '16px' } },
+			el( 'p', {}, __( 'Ask for help drafting objectives, an exemplar, or a coach directive.', 'agentic-coach' ) ),
+			el( TextareaControl, {
+				label: __( 'Your request', 'agentic-coach' ),
+				value: prompt,
+				onChange: setPrompt,
+				rows: 4,
+			} ),
+			el(
+				Button,
+				{ variant: 'primary', onClick: ask, disabled: busy || ! prompt },
+				busy ? el( Spinner, {} ) : __( 'Ask the coach', 'agentic-coach' )
+			),
+			error ? el( Notice, { status: 'error', isDismissible: false }, error ) : null,
+			result
+				? el(
+					'div',
+					{ style: { marginTop: '12px', whiteSpace: 'pre-wrap' }, role: 'region', 'aria-label': __( 'Coach suggestion', 'agentic-coach' ) },
+					result
+				)
+				: null
+		);
+	}
+
+	registerPlugin( 'agentic-coach-sidebar', {
+		render: function () {
+			return el(
+				wp.element.Fragment,
+				{},
+				el(
+					PluginSidebarMoreMenuItem,
+					{ target: 'agentic-coach-sidebar' },
+					__( 'Agentic Coach', 'agentic-coach' )
+				),
+				el(
+					PluginSidebar,
+					{ name: 'agentic-coach-sidebar', title: __( 'Agentic Coach', 'agentic-coach' ) },
+					el( SidebarContent, {} )
+				)
+			);
+		},
+	} );
+} )( window.wp );

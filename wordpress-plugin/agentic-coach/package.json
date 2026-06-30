@@ -1,0 +1,17 @@
+{
+	"name": "agentic-coach",
+	"version": "0.1.0",
+	"description": "Embed a Plato-powered agentic learning coach into WordPress lessons.",
+	"license": "GPL-2.0-or-later",
+	"private": true,
+	"scripts": {
+		"build": "wp-scripts build",
+		"start": "wp-scripts start",
+		"lint:js": "wp-scripts lint-js",
+		"lint:css": "wp-scripts lint-style",
+		"format": "wp-scripts format"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "^30.0.0"
+	}
+}
