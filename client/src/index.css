@@ -82,6 +82,8 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 15%);
     --sidebar-ring: oklch(0.985 0 0);
+    /* WordPress design language — Blueberry, used for hyperlinks. */
+    --link: #213fd4;
 }
 
 .dark {
@@ -116,6 +118,8 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0.2 285);
+    /* Lightened Blueberry for contrast on dark backgrounds. */
+    --link: #8ea2f0;
 }
 
 @layer base {
@@ -139,6 +143,17 @@
   *:focus-visible {
     outline: 3px solid hsl(var(--ring));
     outline-offset: 2px;
+  }
+
+  /* Hyperlinks read as links (Blueberry), not body text. Scoped to the chat's
+     prose (markdown links) and unstyled anchors, so themed nav/header links that
+     set their own color are untouched. */
+  .prose {
+    --tw-prose-links: var(--link);
+  }
+  a:not([class]) {
+    color: var(--link);
+    text-decoration: underline;
   }
 }
 
