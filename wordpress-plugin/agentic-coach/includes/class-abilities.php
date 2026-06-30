@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class Agentic_Coach_Abilities {
 
+	const CATEGORY = 'agentic-coach';
+
 	/**
 	 * Settings module.
 	 *
@@ -43,20 +45,35 @@ class Agentic_Coach_Abilities {
 	}
 
 	/**
-	 * Register on the Abilities API init hook, with a defensive fallback.
+	 * Register on the Abilities API init hooks.
+	 *
+	 * The Abilities API requires registration on `wp_abilities_api_init` (and
+	 * categories on `wp_abilities_api_categories_init`); registering on `init` is
+	 * disallowed. When these actions never fire (WordPress without the Abilities
+	 * API), nothing registers — the plugin's REST routes cover that case.
 	 *
 	 * @return void
 	 */
 	public function register() {
-		add_action( 'abilities_api_init', array( $this, 'register_abilities' ) );
-		add_action(
-			'init',
-			function () {
-				if ( ! did_action( 'abilities_api_init' ) && function_exists( 'wp_register_ability' ) ) {
-					$this->register_abilities();
-				}
-			},
-			20
+		add_action( 'wp_abilities_api_categories_init', array( $this, 'register_category' ) );
+		add_action( 'wp_abilities_api_init', array( $this, 'register_abilities' ) );
+	}
+
+	/**
+	 * Register the ability category every ability belongs to.
+	 *
+	 * @return void
+	 */
+	public function register_category() {
+		if ( ! function_exists( 'wp_register_ability_category' ) ) {
+			return;
+		}
+		wp_register_ability_category(
+			self::CATEGORY,
+			array(
+				'label'       => __( 'Agentic Coach', 'agentic-coach' ),
+				'description' => __( 'Lesson and course context for the Plato coach.', 'agentic-coach' ),
+			)
 		);
 	}
 
@@ -81,6 +98,7 @@ class Agentic_Coach_Abilities {
 		wp_register_ability(
 			'agentic-coach/list-courses',
 			array(
+				'category'            => self::CATEGORY,
 				'label'               => __( 'List coaching courses', 'agentic-coach' ),
 				'description'         => __( 'Returns Agentic Coach courses on this site.', 'agentic-coach' ),
 				'input_schema'        => array(
@@ -97,6 +115,7 @@ class Agentic_Coach_Abilities {
 		wp_register_ability(
 			'agentic-coach/get-lesson-context',
 			array(
+				'category'            => self::CATEGORY,
 				'label'               => __( 'Get lesson context', 'agentic-coach' ),
 				'description'         => __( 'Returns the markdown, objectives, exemplar, coach directive, and course/module for a lesson — for Plato to read over MCP.', 'agentic-coach' ),
 				'input_schema'        => array(
@@ -114,6 +133,7 @@ class Agentic_Coach_Abilities {
 		wp_register_ability(
 			'agentic-coach/get-embed-token',
 			array(
+				'category'            => self::CATEGORY,
 				'label'               => __( 'Get coach embed token', 'agentic-coach' ),
 				'description'         => __( 'Mints a single-use embed URL for the current learner.', 'agentic-coach' ),
 				'input_schema'        => array(

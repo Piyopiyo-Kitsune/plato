@@ -111,15 +111,32 @@ class Agentic_Coach_Content_Types {
 			);
 		};
 
+		// Multi-line fields (objectives, exemplar, coach directive) must preserve
+		// newlines — sanitize_text_field collapses them, which would flatten the
+		// objectives list into a single bullet.
+		$text_meta = function ( $type, $key ) use ( $auth ) {
+			register_post_meta(
+				$type,
+				$key,
+				array(
+					'type'              => 'string',
+					'single'            => true,
+					'show_in_rest'      => true,
+					'sanitize_callback' => 'sanitize_textarea_field',
+					'auth_callback'     => $auth,
+				)
+			);
+		};
+
 		// Lesson → course/module relationships + ordering, plus Plato ids.
 		$int_meta( self::LESSON, '_agentic_course' );
 		$int_meta( self::LESSON, '_agentic_module' );
 		$int_meta( self::LESSON, '_agentic_order' );
 		$string_meta( self::LESSON, '_plato_lesson_id' );
 		$string_meta( self::LESSON, '_plato_course_id' );
-		$string_meta( self::LESSON, '_agentic_exemplar' );
-		$string_meta( self::LESSON, '_agentic_objectives' );
-		$string_meta( self::LESSON, '_agentic_coach_directive' );
+		$text_meta( self::LESSON, '_agentic_exemplar' );
+		$text_meta( self::LESSON, '_agentic_objectives' );
+		$text_meta( self::LESSON, '_agentic_coach_directive' );
 
 		// Module → course relationship + ordering.
 		$int_meta( self::MODULE, '_agentic_course' );
