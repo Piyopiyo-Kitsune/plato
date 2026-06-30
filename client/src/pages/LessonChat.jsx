@@ -515,9 +515,12 @@ export default function LessonChat() {
         </div>
       )}
 
-      {/* Fixed compose overlay — interactive when pinned */}
+      {/* Fixed compose overlay — interactive when pinned. The wrapper is an
+          opaque, full-width strip anchored to the very bottom so chat content
+          scrolls *above* it (and is hidden behind it), never through the
+          transparent padding around the input or in a gap below it. */}
       {phase && composePinned && (
-        <div className="fixed bottom-9 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background">
           <ComposeBar
             placeholder={impersonating ? 'Read-only — viewing as another user' : composePlaceholder}
             onSend={handleSend}
