@@ -134,7 +134,9 @@ class Agentic_Coach_Plato_Client {
 	 * memory to a course in Plato; without it there is no cross-lesson memory.
 	 *
 	 * Expected keys: plato_lesson_id, name, markdown, status ('public'|'draft'),
-	 * course_id (deterministic Plato course id, may be ''), and course_name.
+	 * course_id (deterministic Plato course id, may be ''), course_name, and
+	 * optionally module_name, module_order, lesson_order (for the course-detail
+	 * view, which groups lessons under a module header).
 	 *
 	 * @param array $args Lesson publish arguments (see above).
 	 * @return array|WP_Error
@@ -159,6 +161,9 @@ class Agentic_Coach_Plato_Client {
 			'status'        => isset( $args['status'] ) ? $args['status'] : 'public',
 			'courseId'      => isset( $args['course_id'] ) ? $args['course_id'] : '',
 			'courseName'    => isset( $args['course_name'] ) ? $args['course_name'] : '',
+			'moduleName'    => isset( $args['module_name'] ) ? $args['module_name'] : null,
+			'moduleOrder'   => isset( $args['module_order'] ) ? (int) $args['module_order'] : null,
+			'lessonOrder'   => isset( $args['lesson_order'] ) ? (int) $args['lesson_order'] : null,
 		);
 		return $this->request( '/v1/bridge/lesson', $body );
 	}

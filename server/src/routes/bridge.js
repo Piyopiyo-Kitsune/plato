@@ -155,6 +155,9 @@ bridge.post('/v1/bridge/lesson', bridgeAuth, async (c) => {
     status,
     courseId,
     courseName,
+    moduleName,
+    moduleOrder,
+    lessonOrder,
   } = body || {};
 
   if (!platoLessonId || !markdown) {
@@ -179,6 +182,13 @@ bridge.post('/v1/bridge/lesson', bridgeAuth, async (c) => {
     markdown,
     status: status === 'draft' ? 'draft' : 'public',
     course: courseId || null,
+    // Optional grouping for the course-detail view (rendered under a module
+    // header, ordered). Cleared (set to null) when the caller omits them, so
+    // un-assigning a module in WordPress is reflected on re-publish rather than
+    // leaving a stale module name from a prior publish.
+    module: moduleName || null,
+    moduleOrder: Number.isFinite(moduleOrder) ? moduleOrder : null,
+    order: Number.isFinite(lessonOrder) ? lessonOrder : null,
   };
   await db.putSyncData('_system', `lesson:${platoLessonId}`, lessonRecord, existingLesson?.version);
 

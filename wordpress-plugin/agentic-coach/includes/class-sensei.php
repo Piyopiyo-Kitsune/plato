@@ -85,6 +85,52 @@ class Agentic_Coach_Sensei {
 	}
 
 	/**
+	 * Resolve a Sensei lesson's module name/order and its order within the
+	 * module, for the course-detail view (lessons grouped under a module
+	 * header, in order). Returns nulls when the lesson has no module.
+	 *
+	 * Sensei stores: the lesson's module as the `module` taxonomy term; the
+	 * course's module display order as course meta `module_order` (an array of
+	 * term ids); and a lesson's order within its module as lesson meta
+	 * `_order_module_<module_id>`.
+	 *
+	 * @param int $lesson_id      Sensei lesson post id.
+	 * @param int $course_post_id Sensei course post id (0 if none).
+	 * @return array { name: string|null, module_order: int|null, lesson_order: int|null }
+	 */
+	public static function lesson_module_info( $lesson_id, $course_post_id ) {
+		$none = array( 'name' => null, 'module_order' => null, 'lesson_order' => null );
+		if ( ! self::is_active() ) {
+			return $none;
+		}
+
+		$terms = wp_get_post_terms( $lesson_id, 'module' );
+		if ( is_wp_error( $terms ) || empty( $terms ) ) {
+			return $none;
+		}
+		$module = $terms[0];
+
+		$module_order = null;
+		if ( $course_post_id ) {
+			$order = get_post_meta( $course_post_id, 'module_order', true );
+			if ( is_array( $order ) ) {
+				$position = array_search( (string) $module->term_id, array_map( 'strval', $order ), true );
+				if ( false !== $position ) {
+					$module_order = (int) $position;
+				}
+			}
+		}
+
+		$lesson_order = get_post_meta( $lesson_id, '_order_module_' . $module->term_id, true );
+
+		return array(
+			'name'         => $module->name,
+			'module_order' => $module_order,
+			'lesson_order' => '' !== $lesson_order ? (int) $lesson_order : null,
+		);
+	}
+
+	/**
 	 * Render the embedded coach after a Sensei lesson's content, once the lesson
 	 * has been published to Plato.
 	 *

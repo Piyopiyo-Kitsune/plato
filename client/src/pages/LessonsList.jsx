@@ -180,12 +180,48 @@ export default function LessonsList() {
     });
   }, [lessons, activeCourse, statusFilter, lessonData]);
 
+  // Course-detail view (locked to one course): group lessons under a module
+  // header instead of a flat grid. Modules are ordered by the author-assigned
+  // `moduleOrder` (unordered modules — and lessons with no module at all — sort
+  // last, under "Other"); lessons within a module are ordered by `order`, with a
+  // name fallback so unordered lessons are still stable and alphabetical.
+  const moduleGroups = useMemo(() => {
+    if (!lockedCourse) return null;
+    const groups = new Map();
+    const NO_MODULE = '__none__';
+    for (const l of filtered) {
+      const key = l.module || NO_MODULE;
+      if (!groups.has(key)) {
+        groups.set(key, { key, name: l.module || 'Other', order: l.module ? l.moduleOrder : null, lessons: [] });
+      }
+      groups.get(key).lessons.push(l);
+    }
+    for (const g of groups.values()) {
+      g.lessons.sort((a, b) => {
+        const orderA = a.order ?? Infinity;
+        const orderB = b.order ?? Infinity;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    }
+    return [...groups.values()].sort((a, b) => {
+      if (a.key === NO_MODULE && b.key !== NO_MODULE) return 1;
+      if (a.key !== NO_MODULE && b.key === NO_MODULE) return -1;
+      const orderA = a.order ?? Infinity;
+      const orderB = b.order ?? Infinity;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [lockedCourse, filtered]);
+
   // Pagination math. We clamp the current page to the available range so a
   // filter that shrinks the list below the current page doesn't strand us.
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // The course-detail (locked) view groups by module instead of paginating —
+  // a single course's lesson count is small enough to show in full.
+  const totalPages = lockedCourse ? 1 : Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const visibleLessons = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleLessons = lockedCourse ? filtered : filtered.slice(pageStart, pageStart + PAGE_SIZE);
 
   // Reset to page 1 whenever any filter changes so we never land on an
   // out-of-range page after a tighter filter.
@@ -311,6 +347,42 @@ export default function LessonsList() {
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
           No lessons match this filter.
         </div>
+      ) : moduleGroups && !(moduleGroups.length === 1 && moduleGroups[0].key === '__none__') ? (
+        // Real module grouping exists for this course — show a header per
+        // module. When every visible lesson is unassigned (the single "Other"
+        // group), fall through to the plain flat grid below instead — a lone
+        // "Other" heading with nothing to contrast against is just noise.
+        <div className="space-y-8">
+          {moduleGroups.map((group) => (
+            <section key={group.key} aria-labelledby={`module-${group.key}`}>
+              <h2 id={`module-${group.key}`} className="text-base font-semibold mb-3">
+                {group.name}
+              </h2>
+              <ul
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                role="list"
+                aria-label={`Lessons in ${group.name}`}
+              >
+                {group.lessons.map((c, i) => (
+                  <li
+                    key={c.lessonId}
+                    className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both list-none"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <LessonCard
+                      lesson={c}
+                      progress={lessonData[c.lessonId]}
+                      timeStats={timeStats[c.lessonId]}
+                      onOpen={() => navigate(`/lessons/${c.lessonId}`)}
+                      onShowOverview={() => setDetailLesson(c)}
+                      hideCourse
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       ) : (
         <ul
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
@@ -334,6 +406,7 @@ export default function LessonsList() {
                 timeStats={timeStats[c.lessonId]}
                 onOpen={() => navigate(`/lessons/${c.lessonId}`)}
                 onShowOverview={() => setDetailLesson(c)}
+                hideCourse={!!lockedCourse}
               />
             </li>
           ))}
@@ -379,7 +452,7 @@ export default function LessonsList() {
   );
 }
 
-function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview }) {
+function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideCourse }) {
   // Stable id per card so the open-lesson button can describe itself with
   // the meta strip — Tab navigation announces course + time as
   // supplementary context (status now lives in the indicator and the
@@ -394,7 +467,9 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview }) {
   if (lesson.lessonId.startsWith('custom-')) {
     parts.push({ key: 'custom', text: 'My Lesson' });
   }
-  if (lesson.course?.name) {
+  // Suppressed inside a single course's page (course is already the page
+  // header / module heading there, so repeating it on every card is noise).
+  if (lesson.course?.name && !hideCourse) {
     parts.push({ key: 'course', text: lesson.course.name });
   }
   if (range) {

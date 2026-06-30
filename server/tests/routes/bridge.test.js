@@ -143,6 +143,32 @@ describe('POST /v1/bridge/lesson', () => {
     assert.match(writes['lesson:wp-x-l-7'].markdown, /## Exemplar/);
   });
 
+  it('stores module name/order and lesson order for course-detail grouping', async () => {
+    const writes = {};
+    db.getSyncData = async () => null;
+    db.putSyncData = async (uid, key, data) => { writes[key] = data; };
+    const app = new Hono();
+    app.route('/', bridge);
+    await req(app, 'POST', '/v1/bridge/lesson', signedLessonBody({
+      moduleName: 'Foundations', moduleOrder: 1, lessonOrder: 2,
+    }));
+    assert.equal(writes['lesson:wp-x-l-7'].module, 'Foundations');
+    assert.equal(writes['lesson:wp-x-l-7'].moduleOrder, 1);
+    assert.equal(writes['lesson:wp-x-l-7'].order, 2);
+  });
+
+  it('clears module/order fields when omitted (un-assigning on re-publish)', async () => {
+    const writes = {};
+    db.getSyncData = async () => ({ data: { module: 'Old Module', moduleOrder: 0, order: 0 }, version: 1 });
+    db.putSyncData = async (uid, key, data) => { writes[key] = data; };
+    const app = new Hono();
+    app.route('/', bridge);
+    await req(app, 'POST', '/v1/bridge/lesson', signedLessonBody());
+    assert.equal(writes['lesson:wp-x-l-7'].module, null);
+    assert.equal(writes['lesson:wp-x-l-7'].moduleOrder, null);
+    assert.equal(writes['lesson:wp-x-l-7'].order, null);
+  });
+
   it('rejects an unsigned request', async () => {
     const body = signedLessonBody();
     delete body.sig;

@@ -103,6 +103,35 @@ class Agentic_Coach_Sync {
 	}
 
 	/**
+	 * Resolve the lesson's module name/order and its order within the module,
+	 * per source, for the course-detail view (lessons grouped under a module
+	 * header, in order). Returns nulls when the lesson has no module.
+	 *
+	 * @param WP_Post $post           Lesson post.
+	 * @param int     $course_post_id Course post id (0 if none).
+	 * @return array { name: string|null, module_order: int|null, lesson_order: int|null }
+	 */
+	private function module_info( $post, $course_post_id ) {
+		if ( Agentic_Coach_Sensei::LESSON === $post->post_type && Agentic_Coach_Sensei::is_active() ) {
+			return Agentic_Coach_Sensei::lesson_module_info( $post->ID, $course_post_id );
+		}
+
+		$module_post_id = (int) get_post_meta( $post->ID, '_agentic_module', true );
+		if ( ! $module_post_id ) {
+			return array(
+				'name'         => null,
+				'module_order' => null,
+				'lesson_order' => (int) get_post_meta( $post->ID, '_agentic_order', true ),
+			);
+		}
+		return array(
+			'name'         => get_the_title( $module_post_id ),
+			'module_order' => (int) get_post_meta( $module_post_id, '_agentic_order', true ),
+			'lesson_order' => (int) get_post_meta( $post->ID, '_agentic_order', true ),
+		);
+	}
+
+	/**
 	 * Publish a lesson to Plato and store the returned mapping.
 	 *
 	 * @param WP_REST_Request $request Request.
@@ -124,6 +153,7 @@ class Agentic_Coach_Sync {
 			$course_id   = $this->plato->content_id( 'c', $course_post_id );
 			$course_name = get_the_title( $course_post_id );
 		}
+		$module = $this->module_info( $post, $course_post_id );
 
 		$result = $this->plato->publish_lesson(
 			array(
@@ -133,6 +163,9 @@ class Agentic_Coach_Sync {
 				'status'          => 'publish' === $post->post_status ? 'public' : 'draft',
 				'course_id'       => $course_id,
 				'course_name'     => $course_name,
+				'module_name'     => $module['name'],
+				'module_order'    => $module['module_order'],
+				'lesson_order'    => $module['lesson_order'],
 			)
 		);
 
