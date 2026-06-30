@@ -86,6 +86,22 @@ class Agentic_Coach_REST {
 
 		register_rest_route(
 			self::NS,
+			'/modules',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'list_modules' ),
+				'permission_callback' => array( $this, 'can_author' ),
+				'args'                => array(
+					'course' => array(
+						'required'          => false,
+						'sanitize_callback' => 'absint',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NS,
 			'/courses/(?P<id>\d+)/lessons',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -180,6 +196,38 @@ class Agentic_Coach_REST {
 				'id'          => $course->ID,
 				'title'       => $course->post_title,
 				'platoCourse' => (string) get_post_meta( $course->ID, '_plato_course_id', true ),
+			);
+		}
+		return rest_ensure_response( $out );
+	}
+
+	/**
+	 * GET /modules — modules for the editor selector, optionally filtered by course.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @return WP_REST_Response
+	 */
+	public function list_modules( WP_REST_Request $request ) {
+		$course = (int) $request->get_param( 'course' );
+		$args   = array(
+			'post_type'   => Agentic_Coach_Content_Types::MODULE,
+			'post_status' => array( 'publish', 'draft' ),
+			'numberposts' => 100,
+			'orderby'     => 'title',
+			'order'       => 'ASC',
+		);
+		if ( $course ) {
+			$args['meta_key']   = '_agentic_course'; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bounded authoring query.
+			$args['meta_value'] = $course; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- bounded authoring query.
+		}
+		$modules = get_posts( $args );
+		$out     = array();
+		foreach ( $modules as $module ) {
+			$out[] = array(
+				'id'       => $module->ID,
+				'title'    => $module->post_title,
+				'courseId' => (int) get_post_meta( $module->ID, '_agentic_course', true ),
+				'order'    => (int) get_post_meta( $module->ID, '_agentic_order', true ),
 			);
 		}
 		return rest_ensure_response( $out );

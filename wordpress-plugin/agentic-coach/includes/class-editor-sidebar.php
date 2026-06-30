@@ -12,7 +12,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class Agentic_Coach_Editor_Sidebar {
 
-	const HANDLE = 'agentic-coach-editor-sidebar';
+	const HANDLE           = 'agentic-coach-editor-sidebar';
+	const PLACEMENT_HANDLE = 'agentic-coach-placement-panel';
 
 	/**
 	 * Settings module.
@@ -45,18 +46,31 @@ class Agentic_Coach_Editor_Sidebar {
 	 * @return void
 	 */
 	public function enqueue() {
-		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		if ( ! $screen || Agentic_Coach_Content_Types::LESSON !== $screen->post_type ) {
-			return;
+		$screen    = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$post_type = $screen ? $screen->post_type : '';
+
+		// Placement panel (course/module/order) on module + lesson editors.
+		if ( Agentic_Coach_Content_Types::MODULE === $post_type || Agentic_Coach_Content_Types::LESSON === $post_type ) {
+			wp_enqueue_script(
+				self::PLACEMENT_HANDLE,
+				AGENTIC_COACH_PLUGIN_URL . 'assets/relationship-panel.js',
+				array( 'wp-plugins', 'wp-editor', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-i18n', 'wp-api-fetch' ),
+				AGENTIC_COACH_VERSION,
+				true
+			);
+			wp_set_script_translations( self::PLACEMENT_HANDLE, 'agentic-coach' );
 		}
 
-		wp_enqueue_script(
-			self::HANDLE,
-			AGENTIC_COACH_PLUGIN_URL . 'assets/editor-sidebar.js',
-			array( 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-i18n', 'wp-api-fetch' ),
-			AGENTIC_COACH_VERSION,
-			true
-		);
-		wp_set_script_translations( self::HANDLE, 'agentic-coach' );
+		// Authoring assistant + Publish-to-Plato on the lesson editor only.
+		if ( Agentic_Coach_Content_Types::LESSON === $post_type ) {
+			wp_enqueue_script(
+				self::HANDLE,
+				AGENTIC_COACH_PLUGIN_URL . 'assets/editor-sidebar.js',
+				array( 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-i18n', 'wp-api-fetch' ),
+				AGENTIC_COACH_VERSION,
+				true
+			);
+			wp_set_script_translations( self::HANDLE, 'agentic-coach' );
+		}
 	}
 }
