@@ -128,24 +128,31 @@ class Agentic_Coach_Block {
 	private function render_mount( $plato_lesson_id ) {
 		$title = sprintf(
 			/* translators: %s: lesson title or generic label. */
-			__( 'Agentic coaching for %s', 'agentic-coach' ),
+			__( 'WordPress coaching for %s', 'agentic-coach' ),
 			get_the_title()
 		);
-		?>
-		<div
-			class="agentic-coach__mount"
-			data-plato-url="<?php echo esc_attr( $this->settings->plato_url() ); ?>"
-			data-lesson="<?php echo esc_attr( $plato_lesson_id ); ?>"
-			data-endpoint="<?php echo esc_url( rest_url( Agentic_Coach_REST::NS . '/embed-token' ) ); ?>"
-			data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
-			data-frame-title="<?php echo esc_attr( $title ); ?>"
-		>
-			<div class="agentic-coach__status" role="status" aria-live="polite">
-				<?php esc_html_e( 'Loading your coach…', 'agentic-coach' ); ?>
-			</div>
-			<noscript><?php esc_html_e( 'JavaScript is required to use the WordPress Coach.', 'agentic-coach' ); ?></noscript>
-		</div>
-		<?php
+		echo wp_kses( Agentic_Coach_Embed::mount_html( $this->settings, $plato_lesson_id, $title ), self::mount_kses() );
+	}
+
+	/**
+	 * Allowed HTML for the coach mount markup.
+	 *
+	 * @return array
+	 */
+	public static function mount_kses() {
+		return array(
+			'div'      => array(
+				'class'            => true,
+				'data-plato-url'   => true,
+				'data-lesson'      => true,
+				'data-endpoint'    => true,
+				'data-nonce'       => true,
+				'data-frame-title' => true,
+				'role'             => true,
+				'aria-live'        => true,
+			),
+			'noscript' => array(),
+		);
 	}
 
 	/**

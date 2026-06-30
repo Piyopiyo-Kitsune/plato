@@ -14,6 +14,7 @@
 	var __ = wp.i18n.__;
 	var apiFetch = wp.apiFetch;
 	var select = wp.data.select;
+	var useEntityProp = wp.coreData.useEntityProp;
 	var registerPlugin = wp.plugins.registerPlugin;
 	var PluginSidebar = wp.editPost.PluginSidebar;
 	var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
@@ -21,6 +22,41 @@
 	var Button = wp.components.Button;
 	var Spinner = wp.components.Spinner;
 	var Notice = wp.components.Notice;
+
+	function CoachingFields() {
+		var postType = select( 'core/editor' ).getCurrentPostType();
+		var metaProp = useEntityProp( 'postType', postType || 'post', 'meta' );
+		var meta = metaProp[ 0 ] || {};
+		var setMeta = metaProp[ 1 ];
+		function update( key, value ) {
+			var next = Object.assign( {}, meta );
+			next[ key ] = value;
+			setMeta( next );
+		}
+		return el(
+			'div',
+			{ style: { padding: '16px', borderBottom: '1px solid #e0e0e0' } },
+			el( 'p', {}, __( 'Define what the coach helps the learner achieve. This is sent to Plato when you publish.', 'agentic-coach' ) ),
+			el( TextareaControl, {
+				label: __( 'Learning objectives (one per line)', 'agentic-coach' ),
+				value: meta._agentic_objectives || '',
+				onChange: function ( v ) { update( '_agentic_objectives', v ); },
+				rows: 3,
+			} ),
+			el( TextareaControl, {
+				label: __( 'Exemplar (the mastery outcome the learner produces)', 'agentic-coach' ),
+				value: meta._agentic_exemplar || '',
+				onChange: function ( v ) { update( '_agentic_exemplar', v ); },
+				rows: 3,
+			} ),
+			el( TextareaControl, {
+				label: __( 'Coach directive (optional runtime guidance)', 'agentic-coach' ),
+				value: meta._agentic_coach_directive || '',
+				onChange: function ( v ) { update( '_agentic_coach_directive', v ); },
+				rows: 2,
+			} )
+		);
+	}
 
 	function PublishToPlato() {
 		var busyState = useState( false );
@@ -144,7 +180,7 @@
 				el(
 					PluginSidebar,
 					{ name: 'agentic-coach-sidebar', title: __( 'WordPress Coach', 'agentic-coach' ) },
-					el( wp.element.Fragment, {}, el( PublishToPlato, {} ), el( SidebarContent, {} ) )
+					el( wp.element.Fragment, {}, el( CoachingFields, {} ), el( PublishToPlato, {} ), el( SidebarContent, {} ) )
 				)
 			);
 		},

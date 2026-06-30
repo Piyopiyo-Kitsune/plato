@@ -61,12 +61,15 @@ class Agentic_Coach_Editor_Sidebar {
 			wp_set_script_translations( self::PLACEMENT_HANDLE, 'agentic-coach' );
 		}
 
-		// Authoring assistant + Publish-to-Plato on the lesson editor only.
-		if ( Agentic_Coach_Content_Types::LESSON === $post_type ) {
+		// Coaching definition + Publish-to-Plato sidebar: our lessons and (when
+		// Sensei is active) Sensei lessons, which map to Plato via their course.
+		$is_our_lesson    = Agentic_Coach_Content_Types::LESSON === $post_type;
+		$is_sensei_lesson = Agentic_Coach_Sensei::LESSON === $post_type && Agentic_Coach_Sensei::is_active();
+		if ( $is_our_lesson || $is_sensei_lesson ) {
 			wp_enqueue_script(
 				self::HANDLE,
 				AGENTIC_COACH_PLUGIN_URL . 'assets/editor-sidebar.js',
-				array( 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-i18n', 'wp-api-fetch' ),
+				array( 'wp-plugins', 'wp-edit-post', 'wp-element', 'wp-components', 'wp-data', 'wp-core-data', 'wp-i18n', 'wp-api-fetch' ),
 				AGENTIC_COACH_VERSION,
 				true
 			);

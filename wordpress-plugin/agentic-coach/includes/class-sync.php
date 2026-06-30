@@ -76,6 +76,33 @@ class Agentic_Coach_Sync {
 	}
 
 	/**
+	 * Whether a post type can be published to Plato — our lessons, plus Sensei
+	 * lessons when the Sensei LMS integration is active.
+	 *
+	 * @param string $post_type Post type.
+	 * @return bool
+	 */
+	public static function is_publishable( $post_type ) {
+		if ( Agentic_Coach_Content_Types::LESSON === $post_type ) {
+			return true;
+		}
+		return Agentic_Coach_Sensei::LESSON === $post_type && Agentic_Coach_Sensei::is_active();
+	}
+
+	/**
+	 * Resolve the course post id for a lesson, per its source.
+	 *
+	 * @param WP_Post $post Lesson post.
+	 * @return int
+	 */
+	private function course_post_id( $post ) {
+		if ( Agentic_Coach_Sensei::LESSON === $post->post_type && Agentic_Coach_Sensei::is_active() ) {
+			return (int) get_post_meta( $post->ID, Agentic_Coach_Sensei::COURSE_META, true );
+		}
+		return (int) get_post_meta( $post->ID, '_agentic_course', true );
+	}
+
+	/**
 	 * Publish a lesson to Plato and store the returned mapping.
 	 *
 	 * @param WP_REST_Request $request Request.
@@ -84,13 +111,13 @@ class Agentic_Coach_Sync {
 	public function publish( WP_REST_Request $request ) {
 		$post_id = (int) $request->get_param( 'postId' );
 		$post    = get_post( $post_id );
-		if ( ! $post || Agentic_Coach_Content_Types::LESSON !== $post->post_type ) {
+		if ( ! $post || ! self::is_publishable( $post->post_type ) ) {
 			return new WP_Error( 'agentic_coach_not_lesson', __( 'Not a coaching lesson.', 'agentic-coach' ), array( 'status' => 400 ) );
 		}
 
 		$plato_lesson_id = $this->plato->content_id( 'l', $post_id );
 
-		$course_post_id = (int) get_post_meta( $post_id, '_agentic_course', true );
+		$course_post_id = $this->course_post_id( $post );
 		$course_id      = '';
 		$course_name    = '';
 		if ( $course_post_id ) {
