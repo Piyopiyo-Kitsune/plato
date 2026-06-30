@@ -108,6 +108,60 @@ describe('POST /v1/bridge/token', () => {
   });
 });
 
+describe('POST /v1/bridge/lesson', () => {
+  function signedLessonBody(overrides = {}) {
+    const ts = Math.floor(Date.now() / 1000);
+    const base = { siteId: 'https://learn.example.org', wpUserId: 'publish', lessonId: 'wp-x-l-7', ts };
+    return {
+      ...base,
+      sig: signBridgeRequest(SECRET, base),
+      platoLessonId: 'wp-x-l-7',
+      name: 'Intro to Hooks',
+      markdown: '# Intro to Hooks\nLearn hooks.\n\n## Learning Objectives\n- Use add_action\n\n## Exemplar\nA working hook.',
+      status: 'public',
+      courseId: 'wp-x-c-3',
+      courseName: 'WordPress Basics',
+      ...overrides,
+    };
+  }
+
+  it('upserts the course and lesson with the course association set', async () => {
+    const writes = {};
+    db.getSyncData = async () => null;
+    db.putSyncData = async (uid, key, data) => { writes[key] = data; };
+    const app = new Hono();
+    app.route('/', bridge);
+    const res = await req(app, 'POST', '/v1/bridge/lesson', signedLessonBody());
+    assert.equal(res.status, 200);
+    const out = await res.json();
+    assert.equal(out.lessonId, 'wp-x-l-7');
+    assert.equal(out.courseId, 'wp-x-c-3');
+    assert.equal(writes['course:wp-x-c-3'].name, 'WordPress Basics');
+    assert.equal(writes['lesson:wp-x-l-7'].status, 'public');
+    // The course link is what scopes cross-lesson memory — it must be persisted.
+    assert.equal(writes['lesson:wp-x-l-7'].course, 'wp-x-c-3');
+    assert.match(writes['lesson:wp-x-l-7'].markdown, /## Exemplar/);
+  });
+
+  it('rejects an unsigned request', async () => {
+    const body = signedLessonBody();
+    delete body.sig;
+    const app = new Hono();
+    app.route('/', bridge);
+    const res = await req(app, 'POST', '/v1/bridge/lesson', body);
+    assert.equal(res.status, 400);
+  });
+
+  it('rejects when markdown is missing', async () => {
+    db.getSyncData = async () => null;
+    db.putSyncData = async () => {};
+    const app = new Hono();
+    app.route('/', bridge);
+    const res = await req(app, 'POST', '/v1/bridge/lesson', signedLessonBody({ markdown: '' }));
+    assert.equal(res.status, 400);
+  });
+});
+
 describe('POST /v1/bridge/exchange', () => {
   it('trades a valid code for tokens and consumes it', async () => {
     let deleted = null;

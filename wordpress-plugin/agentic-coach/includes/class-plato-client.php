@@ -115,6 +115,55 @@ class Agentic_Coach_Plato_Client {
 	}
 
 	/**
+	 * Deterministic Plato content id for a WordPress post, namespaced per site so
+	 * republishing updates the same Plato record and different sites never collide.
+	 *
+	 * @param string $kind 'l' for lesson, 'c' for course.
+	 * @param int    $post_id WordPress post id.
+	 * @return string
+	 */
+	public function content_id( $kind, $post_id ) {
+		$hash = substr( hash( 'sha256', $this->settings->site_id() ), 0, 8 );
+		return 'wp-' . $hash . '-' . $kind . '-' . (int) $post_id;
+	}
+
+	/**
+	 * Publish (create or update) a lesson + its course into Plato content.
+	 *
+	 * Setting the course association is what scopes per-learner cross-lesson
+	 * memory to a course in Plato; without it there is no cross-lesson memory.
+	 *
+	 * Expected keys: plato_lesson_id, name, markdown, status ('public'|'draft'),
+	 * course_id (deterministic Plato course id, may be ''), and course_name.
+	 *
+	 * @param array $args Lesson publish arguments (see above).
+	 * @return array|WP_Error
+	 */
+	public function publish_lesson( array $args ) {
+		if ( ! $this->settings->is_configured() ) {
+			return new WP_Error( 'agentic_coach_unconfigured', __( 'The Agentic Coach is not configured.', 'agentic-coach' ) );
+		}
+		$site_id = $this->settings->site_id();
+		$ts      = time();
+		// Reuse the bridge signature to authenticate this site as the caller.
+		$signed_user = 'publish';
+		$body        = array(
+			'siteId'        => $site_id,
+			'wpUserId'      => $signed_user,
+			'lessonId'      => $args['plato_lesson_id'],
+			'ts'            => $ts,
+			'sig'           => $this->sign( $site_id, $signed_user, $args['plato_lesson_id'], $ts ),
+			'platoLessonId' => $args['plato_lesson_id'],
+			'name'          => $args['name'],
+			'markdown'      => $args['markdown'],
+			'status'        => isset( $args['status'] ) ? $args['status'] : 'public',
+			'courseId'      => isset( $args['course_id'] ) ? $args['course_id'] : '',
+			'courseName'    => isset( $args['course_name'] ) ? $args['course_name'] : '',
+		);
+		return $this->request( '/v1/bridge/lesson', $body );
+	}
+
+	/**
 	 * GDPR erasure: ask Plato to delete the mapped learner and their data.
 	 *
 	 * @param int $user_id WordPress user id.

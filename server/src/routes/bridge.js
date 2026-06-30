@@ -141,6 +141,50 @@ bridge.post('/v1/bridge/exchange', async (c) => {
   });
 });
 
+// POST /v1/bridge/lesson — signed, server-to-server. Upserts a course +
+// lesson into Plato content so a WordPress-authored lesson becomes a real,
+// startable Plato lesson. Setting the lesson's `course` is load-bearing: it is
+// what scopes per-learner cross-lesson memory (`courseProgress:<courseId>`) to a
+// course and keeps it from crossing into other courses.
+bridge.post('/v1/bridge/lesson', bridgeAuth, async (c) => {
+  const body = await c.req.json();
+  const {
+    platoLessonId,
+    name,
+    markdown,
+    status,
+    courseId,
+    courseName,
+  } = body || {};
+
+  if (!platoLessonId || !markdown) {
+    return c.json({ error: 'platoLessonId and markdown are required' }, 400);
+  }
+
+  // Upsert the course record first so the lesson's `course` resolves to a name.
+  if (courseId) {
+    const existingCourse = await db.getSyncData('_system', `course:${courseId}`);
+    await db.putSyncData(
+      '_system',
+      `course:${courseId}`,
+      { ...(existingCourse?.data || {}), name: courseName || existingCourse?.data?.name || courseId },
+      existingCourse?.version,
+    );
+  }
+
+  const existingLesson = await db.getSyncData('_system', `lesson:${platoLessonId}`);
+  const lessonRecord = {
+    ...(existingLesson?.data || {}),
+    name: name || existingLesson?.data?.name || 'Untitled lesson',
+    markdown,
+    status: status === 'draft' ? 'draft' : 'public',
+    course: courseId || null,
+  };
+  await db.putSyncData('_system', `lesson:${platoLessonId}`, lessonRecord, existingLesson?.version);
+
+  return c.json({ lessonId: platoLessonId, courseId: courseId || null });
+});
+
 // POST /v1/bridge/forget — signed, server-to-server. GDPR erasure: deletes the
 // mapped Plato learner and all of their sync data (chat, progress, profile).
 bridge.post('/v1/bridge/forget', bridgeAuth, async (c) => {

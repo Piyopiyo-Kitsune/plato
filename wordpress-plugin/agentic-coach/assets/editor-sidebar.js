@@ -13,6 +13,7 @@
 	var useState = wp.element.useState;
 	var __ = wp.i18n.__;
 	var apiFetch = wp.apiFetch;
+	var select = wp.data.select;
 	var registerPlugin = wp.plugins.registerPlugin;
 	var PluginSidebar = wp.editPost.PluginSidebar;
 	var PluginSidebarMoreMenuItem = wp.editPost.PluginSidebarMoreMenuItem;
@@ -20,6 +21,52 @@
 	var Button = wp.components.Button;
 	var Spinner = wp.components.Spinner;
 	var Notice = wp.components.Notice;
+
+	function PublishToPlato() {
+		var busyState = useState( false );
+		var busy = busyState[ 0 ];
+		var setBusy = busyState[ 1 ];
+		var msgState = useState( null );
+		var msg = msgState[ 0 ];
+		var setMsg = msgState[ 1 ];
+
+		function publish() {
+			setBusy( true );
+			setMsg( null );
+			var postId = select( 'core/editor' ).getCurrentPostId();
+			apiFetch( {
+				path: '/agentic-coach/v1/publish-lesson',
+				method: 'POST',
+				data: { postId: postId },
+			} )
+				.then( function ( data ) {
+					setMsg( {
+						status: 'success',
+						text: data && data.courseLinked
+							? __( 'Published to Plato and linked to its course — cross-lesson memory will span this course.', 'agentic-coach' )
+							: __( 'Published to Plato. Assign this lesson to a course so the coach remembers across lessons.', 'agentic-coach' ),
+					} );
+				} )
+				.catch( function ( err ) {
+					setMsg( { status: 'error', text: ( err && err.message ) || __( 'Publish failed.', 'agentic-coach' ) } );
+				} )
+				.finally( function () {
+					setBusy( false );
+				} );
+		}
+
+		return el(
+			'div',
+			{ style: { padding: '16px', borderBottom: '1px solid #e0e0e0' } },
+			el( 'p', {}, __( 'Push this lesson to Plato so it can be embedded and coached.', 'agentic-coach' ) ),
+			el(
+				Button,
+				{ variant: 'secondary', onClick: publish, disabled: busy },
+				busy ? el( Spinner, {} ) : __( 'Publish to Plato', 'agentic-coach' )
+			),
+			msg ? el( Notice, { status: msg.status, isDismissible: false }, msg.text ) : null
+		);
+	}
 
 	function SidebarContent() {
 		var promptState = useState( '' );
@@ -97,7 +144,7 @@
 				el(
 					PluginSidebar,
 					{ name: 'agentic-coach-sidebar', title: __( 'Agentic Coach', 'agentic-coach' ) },
-					el( SidebarContent, {} )
+					el( wp.element.Fragment, {}, el( PublishToPlato, {} ), el( SidebarContent, {} ) )
 				)
 			);
 		},
