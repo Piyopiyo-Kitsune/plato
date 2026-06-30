@@ -67,23 +67,65 @@ class Agentic_Coach_Content_Types {
 	 * @return void
 	 */
 	public function render_landing() {
-		$links = array(
-			self::COURSE => __( 'Coaching Courses', 'agentic-coach' ),
-			self::MODULE => __( 'Coaching Modules', 'agentic-coach' ),
-			self::LESSON => __( 'Coaching Lessons', 'agentic-coach' ),
-		);
+		$settings_url = is_multisite()
+			? network_admin_url( 'settings.php?page=agentic-coach' )
+			: admin_url( 'admin.php?page=agentic-coach' );
+		$course_url   = admin_url( 'edit.php?post_type=' . self::COURSE );
+		$module_url   = admin_url( 'edit.php?post_type=' . self::MODULE );
+		$lesson_url   = admin_url( 'edit.php?post_type=' . self::LESSON );
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'WordPress Coach', 'agentic-coach' ); ?></h1>
-			<p><?php esc_html_e( 'Author agentic coaching content, then embed it into lessons with the WordPress Coach block.', 'agentic-coach' ); ?></p>
-			<h2 class="screen-reader-text"><?php esc_html_e( 'Content areas', 'agentic-coach' ); ?></h2>
-			<ul class="ul-disc">
-				<?php foreach ( $links as $type => $label ) : ?>
-					<li>
-						<a href="<?php echo esc_url( admin_url( 'edit.php?post_type=' . $type ) ); ?>"><?php echo esc_html( $label ); ?></a>
-					</li>
-				<?php endforeach; ?>
-			</ul>
+			<p style="max-width:46rem;">
+				<?php esc_html_e( 'WordPress Coach lets you author coaching courses, modules, and lessons in WordPress, sync them to your Plato server, and embed a live AI coach into any page with the WordPress Coach block.', 'agentic-coach' ); ?>
+			</p>
+
+			<h2><?php esc_html_e( 'Quick links', 'agentic-coach' ); ?></h2>
+			<p>
+				<a class="button" href="<?php echo esc_url( $settings_url ); ?>"><?php esc_html_e( 'Settings', 'agentic-coach' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $course_url ); ?>"><?php esc_html_e( 'Courses', 'agentic-coach' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $module_url ); ?>"><?php esc_html_e( 'Modules', 'agentic-coach' ); ?></a>
+				<a class="button" href="<?php echo esc_url( $lesson_url ); ?>"><?php esc_html_e( 'Lessons', 'agentic-coach' ); ?></a>
+			</p>
+
+			<h2><?php esc_html_e( 'How to set up a coaching experience', 'agentic-coach' ); ?></h2>
+			<ol style="max-width:46rem;">
+				<li>
+					<strong><?php esc_html_e( 'Connect to Plato.', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'In Settings, enter your Plato server URL and the bridge shared secret (it must match BRIDGE_SHARED_SECRET on the Plato server). The AI provider key lives in Plato, not WordPress.', 'agentic-coach' ); ?>
+				</li>
+				<li>
+					<strong><?php esc_html_e( 'Create a course.', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'Under Coaching Courses, add a course such as “WordPress Basics”.', 'agentic-coach' ); ?>
+				</li>
+				<li>
+					<strong><?php esc_html_e( 'Add modules.', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'Under Coaching Modules, create modules and use the “Coaching placement” panel (editor sidebar) to assign each to a course and set its order.', 'agentic-coach' ); ?>
+				</li>
+				<li>
+					<strong><?php esc_html_e( 'Write lessons.', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'Under Coaching Lessons, write a title, a short description, Learning Objectives, an Exemplar (the mastery outcome the learner produces), and an optional Coach Directive. In “Coaching placement”, assign the lesson to its course and module.', 'agentic-coach' ); ?>
+				</li>
+				<li>
+					<strong><?php esc_html_e( 'Publish to Plato.', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'Open the WordPress Coach sidebar (the star icon, top-right of the lesson editor) and click “Publish to Plato” — see below for exactly what this does.', 'agentic-coach' ); ?>
+				</li>
+				<li>
+					<strong><?php esc_html_e( 'Embed the coach.', 'agentic-coach' ); ?></strong>
+					<?php esc_html_e( 'On any page or post, add the “WordPress Coach” block, choose the course and lesson, and publish. Logged-in learners then get a live, embedded coach.', 'agentic-coach' ); ?>
+				</li>
+			</ol>
+
+			<h2><?php esc_html_e( 'What “Publish to Plato” does', 'agentic-coach' ); ?></h2>
+			<ol style="max-width:46rem;">
+				<li><?php esc_html_e( 'Builds the lesson’s markdown from its title, description, Learning Objectives, Exemplar, and Coach Directive.', 'agentic-coach' ); ?></li>
+				<li><?php esc_html_e( 'Sends it to Plato server-to-server over a signed request (the secret never reaches the browser), creating or updating a Plato lesson under a stable id and ensuring its course exists in Plato.', 'agentic-coach' ); ?></li>
+				<li><?php esc_html_e( 'Sets the Plato lesson’s status to public — or draft, if the WordPress lesson is still a draft.', 'agentic-coach' ); ?></li>
+				<li><?php esc_html_e( 'Stores the returned Plato lesson id on the WordPress lesson so the block can embed it. Re-publishing updates the same Plato lesson.', 'agentic-coach' ); ?></li>
+			</ol>
+			<p style="max-width:46rem;">
+				<?php esc_html_e( 'Because the lesson is linked to its course in Plato, the coach remembers what each learner demonstrated in earlier lessons of the same course — and never mixes that memory across different courses. Assign a course before publishing to enable this.', 'agentic-coach' ); ?>
+			</p>
 		</div>
 		<?php
 	}
