@@ -104,7 +104,7 @@ class Agentic_Coach_Content_Types {
 				</li>
 				<li>
 					<strong><?php esc_html_e( 'Write lessons.', 'agentic-coach' ); ?></strong>
-					<?php esc_html_e( 'Under Coaching Lessons, write a title, a short description, Learning Objectives, an Exemplar (the mastery outcome the learner produces), and an optional Coach Directive. In “Coaching placement”, assign the lesson to its course and module.', 'agentic-coach' ); ?>
+					<?php esc_html_e( 'Under Coaching Lessons, add a title and a short description. In the “Coaching content” panel (open the editor’s document sidebar), enter the Learning Objectives and the Exemplar — the mastery-level outcome the learner should produce — plus an optional Coach Directive. In “Coaching placement”, assign the lesson to its course and module.', 'agentic-coach' ); ?>
 				</li>
 				<li>
 					<strong><?php esc_html_e( 'Publish to Plato.', 'agentic-coach' ); ?></strong>
@@ -126,6 +126,34 @@ class Agentic_Coach_Content_Types {
 			<p style="max-width:46rem;">
 				<?php esc_html_e( 'Because the lesson is linked to its course in Plato, the coach remembers what each learner demonstrated in earlier lessons of the same course — and never mixes that memory across different courses. Assign a course before publishing to enable this.', 'agentic-coach' ); ?>
 			</p>
+
+			<?php if ( Agentic_Coach_Sensei::is_active() ) : ?>
+				<h2><?php esc_html_e( 'Using WordPress Coach with Sensei LMS', 'agentic-coach' ); ?></h2>
+				<p style="max-width:46rem;">
+					<?php esc_html_e( 'Sensei LMS is active, so you can add a coach to your existing Sensei lessons — no separate courses or modules required. WordPress Coach reuses each lesson’s Sensei course for the coach’s memory.', 'agentic-coach' ); ?>
+				</p>
+				<ol style="max-width:46rem;">
+					<li>
+						<strong><?php esc_html_e( 'Edit a Sensei lesson.', 'agentic-coach' ); ?></strong>
+						<?php esc_html_e( 'Under Sensei LMS → Lessons, open a lesson and assign it to a Sensei course as usual.', 'agentic-coach' ); ?>
+					</li>
+					<li>
+						<strong><?php esc_html_e( 'Add coaching content.', 'agentic-coach' ); ?></strong>
+						<?php esc_html_e( 'In the editor’s document sidebar, open the “Coaching content” panel and enter the Learning Objectives and Exemplar (and an optional Coach Directive).', 'agentic-coach' ); ?>
+					</li>
+					<li>
+						<strong><?php esc_html_e( 'Publish to Plato.', 'agentic-coach' ); ?></strong>
+						<?php esc_html_e( 'Open the WordPress Coach sidebar (star icon) and click “Publish to Plato”. The lesson is published under its Sensei course.', 'agentic-coach' ); ?>
+					</li>
+					<li>
+						<strong><?php esc_html_e( 'That’s it.', 'agentic-coach' ); ?></strong>
+						<?php esc_html_e( 'The coach appears automatically at the end of that Sensei lesson for logged-in learners — no block needed.', 'agentic-coach' ); ?>
+					</li>
+				</ol>
+				<p style="max-width:46rem;">
+					<?php esc_html_e( 'Every lesson in the same Sensei course shares one Plato course, so the coach remembers what a learner demonstrated across that course’s lessons — and keeps it separate from other courses.', 'agentic-coach' ); ?>
+				</p>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
