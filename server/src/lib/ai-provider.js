@@ -1,15 +1,21 @@
 /**
- * AI provider abstraction — supports Amazon Bedrock or direct Anthropic API.
+ * AI provider abstraction — supports Amazon Bedrock, direct Anthropic API, or
+ * any OpenAI-compatible endpoint.
  *
  * Set AI_PROVIDER env var:
  *   "bedrock"    — uses AWS Bedrock (requires AWS credentials, default for Lambda)
  *   "anthropic"  — uses Anthropic API directly (requires ANTHROPIC_API_KEY)
+ *   "openai"     — uses OpenAI (or any OpenAI-compatible endpoint); requires
+ *                  OPENAI_API_KEY, plus optional OPENAI_MODEL / OPENAI_BASE_URL
  *
- * Default: "anthropic" if ANTHROPIC_API_KEY is set, otherwise "bedrock"
+ * Default: "anthropic" if ANTHROPIC_API_KEY is set, else "openai" if
+ * OPENAI_API_KEY is set, otherwise "bedrock".
  */
 
 const provider = process.env.AI_PROVIDER
-  || (process.env.ANTHROPIC_API_KEY ? 'anthropic' : 'bedrock');
+  || (process.env.ANTHROPIC_API_KEY
+    ? 'anthropic'
+    : (process.env.OPENAI_API_KEY ? 'openai' : 'bedrock'));
 
 // Timeout for Bedrock requests — set just under the Lambda function timeout
 // (120 s) so errors propagate cleanly rather than causing a hard Lambda kill.
@@ -74,6 +80,9 @@ if (provider === 'anthropic') {
       }
     },
   };
+} else if (provider === 'openai') {
+  // OpenAI or any OpenAI-compatible endpoint.
+  ai = (await import('./openai.js')).default;
 } else {
   // Amazon Bedrock
   const { BedrockRuntimeClient, InvokeModelCommand, InvokeModelWithResponseStreamCommand } = await import('@aws-sdk/client-bedrock-runtime');
