@@ -54,7 +54,13 @@ accessible throughout the lesson.
 ## Files
 
 - `server/index.js` — hook handler, orchestrates the 3-agent pipeline
-- `server/query-executor.js` — fetches from wordpress.org, Make, GitHub
+- `server/query-executor.js` — fetches from wordpress.org, Make, GitHub; also
+  merges `mcp-client` results when the sidecar is configured
+- `server/mcp-client.js` — optional MCP-over-HTTP client for Automattic's
+  `mcp-context-wporg` sidecar (Make/WordPress-GitHub/Trac). Gated by env
+  (`MCP_CONTEXT_WPORG_URL` + `MCP_BEARER_TOKEN`); strictly fail-open. See
+  `services/mcp-context-wporg/README.md`. This env gate is consistent with the
+  "no settings" invariant — it's server config, not a plugin admin UI.
 - `server/sources.js` — SOURCES list (API endpoints) and KEYWORDS (WordPress, WP,
   Gutenberg, etc.)
 - `prompts/wordpress-info-planner.md` — planner agent prompt (via orchestrator)
