@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext.jsx';
 import AppShell from './components/AppShell.jsx';
 import LessonsList from './pages/LessonsList.jsx';
+import CoursesList from './pages/CoursesList.jsx';
 import LessonChat from './pages/LessonChat.jsx';
 import EmbedLessonChat from './pages/EmbedLessonChat.jsx';
 import Settings from './pages/Settings.jsx';
@@ -134,12 +135,14 @@ export default function App() {
             <BrandingProvider>
             <AppShell>
               <Routes>
+                <Route path="/courses" element={<CoursesList />} />
+                <Route path="/courses/:courseId" element={<LessonsList />} />
                 <Route path="/lessons" element={<LessonsList />} />
                 <Route path="/lessons/create" element={<Navigate to="/lessons" replace />} />
                 <Route path="/lessons/:lessonGroupId" element={<LessonChat />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/" element={<Navigate to="/lessons" replace />} />
-                <Route path="*" element={<Navigate to="/lessons" replace />} />
+                <Route path="/" element={<Navigate to="/courses" replace />} />
+                <Route path="*" element={<Navigate to="/courses" replace />} />
               </Routes>
             </AppShell>
             </BrandingProvider>

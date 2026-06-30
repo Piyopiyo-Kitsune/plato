@@ -110,7 +110,7 @@ export default function AppShell({ children }) {
         role="banner"
       >
         <nav className="mx-auto max-w-5xl flex items-center gap-2" aria-label="Main navigation">
-          <a href="/lessons" onClick={e => { e.preventDefault(); navigate('/lessons'); }} className="shrink-0" aria-label="Go to lessons list">
+          <a href="/courses" onClick={e => { e.preventDefault(); navigate('/courses'); }} className="shrink-0" aria-label="Go to courses">
             {classroomLogo ? (
               <img src={classroomLogo} alt="" className="h-8 w-auto" />
             ) : (

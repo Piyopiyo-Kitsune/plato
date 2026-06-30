@@ -1,5 +1,5 @@
 import { Fragment, useState, useEffect, useMemo, useId } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext.jsx';
 import { getLessonKB } from '../../js/storage.js';
 import { authenticatedFetch } from '../../js/auth.js';
@@ -66,6 +66,13 @@ export default function LessonsList() {
   const [courseFilter, setCourseFilter] = useState(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState(STATUS_ALL);
   const [page, setPage] = useState(1);
+
+  // When rendered at /courses/:courseId this view is locked to one course: the
+  // course is fixed by the route (so the dropdown is hidden) and the page shows
+  // a course title + back link. At /lessons there is no param, so it behaves as
+  // the full, filterable list.
+  const lockedCourse = useParams().courseId || null;
+  const activeCourse = lockedCourse || courseFilter;
 
   useEffect(() => {
     (async () => {
@@ -135,6 +142,7 @@ export default function LessonsList() {
   // current filter was just deleted server-side), fall back to "all" so the
   // user isn't stranded on a stale filter that matches nothing.
   useEffect(() => {
+    if (lockedCourse) return; // route-locked course is authoritative; never reset it.
     if (!hasCourseFilter && courseFilter !== FILTER_ALL) {
       setCourseFilter(FILTER_ALL);
     } else if (
@@ -144,15 +152,15 @@ export default function LessonsList() {
     ) {
       setCourseFilter(FILTER_ALL);
     }
-  }, [hasCourseFilter, courseFilter, courseOptions.named]);
+  }, [lockedCourse, hasCourseFilter, courseFilter, courseOptions.named]);
 
   // Apply both filters. Course narrows by taxonomy; status narrows by the
   // learner's progress on each lesson. Combined as logical AND so the grid
   // only shows lessons matching every active filter.
   const filtered = useMemo(() => {
     let result = lessons;
-    if (courseFilter === FILTER_NONE) result = result.filter((l) => !l.course?.id);
-    else if (courseFilter !== FILTER_ALL) result = result.filter((l) => l.course?.id === courseFilter);
+    if (activeCourse === FILTER_NONE) result = result.filter((l) => !l.course?.id);
+    else if (activeCourse !== FILTER_ALL) result = result.filter((l) => l.course?.id === activeCourse);
     if (statusFilter !== STATUS_ALL) {
       result = result.filter((l) => lessonStatusKey(lessonData[l.lessonId]) === statusFilter);
     }
@@ -170,7 +178,7 @@ export default function LessonsList() {
       // Within the same course (or both uncategorized), sort by lesson name
       return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [lessons, courseFilter, statusFilter, lessonData]);
+  }, [lessons, activeCourse, statusFilter, lessonData]);
 
   // Pagination math. We clamp the current page to the available range so a
   // filter that shrinks the list below the current page doesn't strand us.
@@ -181,7 +189,7 @@ export default function LessonsList() {
 
   // Reset to page 1 whenever any filter changes so we never land on an
   // out-of-range page after a tighter filter.
-  useEffect(() => { setPage(1); }, [courseFilter, statusFilter]);
+  useEffect(() => { setPage(1); }, [activeCourse, statusFilter]);
 
   // Live announcement: assembled from filter + page state. Updates whenever
   // either changes, which is exactly the moment screen reader users need to
@@ -190,16 +198,23 @@ export default function LessonsList() {
   // the first time on render is sometimes missed).
   const filterPhrase = useMemo(() => {
     const phrases = [];
-    if (courseFilter === FILTER_NONE) phrases.push('without a course');
-    else if (courseFilter !== FILTER_ALL) {
-      const name = courseOptions.named.find((c) => c.id === courseFilter)?.name;
+    if (activeCourse === FILTER_NONE) phrases.push('without a course');
+    else if (activeCourse !== FILTER_ALL) {
+      const name = courseOptions.named.find((c) => c.id === activeCourse)?.name;
       phrases.push(name ? `in the course "${name}"` : 'in the selected course');
     }
     if (statusFilter === STATUS_NOT_STARTED) phrases.push('not started');
     else if (statusFilter === STATUS_IN_PROGRESS) phrases.push('in progress');
     else if (statusFilter === STATUS_COMPLETED) phrases.push('completed');
     return phrases.join(', ');
-  }, [courseFilter, statusFilter, courseOptions.named]);
+  }, [activeCourse, statusFilter, courseOptions.named]);
+
+  // Display name for the route-locked course heading.
+  const lockedCourseName = lockedCourse
+    ? (lockedCourse === FILTER_NONE
+      ? 'Uncategorized'
+      : (courseOptions.named.find((c) => c.id === lockedCourse)?.name || 'Course'))
+    : null;
 
   const announcement = useMemo(() => {
     // Empty while still loading. Once `loaded` flips, the live region's
@@ -226,9 +241,18 @@ export default function LessonsList() {
   return (
     <div className="mx-auto max-w-5xl p-4">
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold">Lessons</h1>
+        {lockedCourse ? (
+          <div>
+            <Link to="/courses" className="text-sm text-muted-foreground hover:text-foreground">
+              &larr; All courses
+            </Link>
+            <h1 className="text-xl font-semibold">{lockedCourseName}</h1>
+          </div>
+        ) : (
+          <h1 className="text-xl font-semibold">Lessons</h1>
+        )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {hasCourseFilter && (
+          {!lockedCourse && hasCourseFilter && (
             <div className="flex items-center gap-2">
               <label htmlFor="course-filter" className="text-sm text-muted-foreground">Course</label>
               <select
