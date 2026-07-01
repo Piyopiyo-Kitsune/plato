@@ -99,7 +99,7 @@ class Agentic_Coach_Sensei {
 	 * @return array { name: string|null, module_order: int|null, lesson_order: int|null }
 	 */
 	public static function lesson_module_info( $lesson_id, $course_post_id ) {
-		$none = array( 'name' => null, 'module_order' => null, 'lesson_order' => null );
+		$none = array( 'name' => null, 'description' => null, 'module_order' => null, 'lesson_order' => null );
 		if ( ! self::is_active() ) {
 			return $none;
 		}
@@ -125,6 +125,7 @@ class Agentic_Coach_Sensei {
 
 		return array(
 			'name'         => $module->name,
+			'description'  => '' !== (string) $module->description ? (string) $module->description : null,
 			'module_order' => $module_order,
 			'lesson_order' => '' !== $lesson_order ? (int) $lesson_order : null,
 		);

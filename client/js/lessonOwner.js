@@ -30,6 +30,13 @@ export async function loadLessons() {
           // context builder.
           const parsed = parseLessonPrompt(lesson.lessonId, lesson.markdown);
           if (lesson.course) parsed.course = lesson.course;
+          // Module grouping + ordering live as top-level server fields (set on
+          // publish), not in the markdown — carry them forward so the course view
+          // can group by module and order by module → lesson order.
+          parsed.module = lesson.module ?? null;
+          parsed.moduleDescription = lesson.moduleDescription ?? null;
+          parsed.moduleOrder = lesson.moduleOrder ?? null;
+          parsed.order = lesson.order ?? null;
           lessons.push(parsed);
         }
       }

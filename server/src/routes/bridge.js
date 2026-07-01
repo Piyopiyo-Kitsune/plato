@@ -158,6 +158,7 @@ bridge.post('/v1/bridge/lesson', bridgeAuth, async (c) => {
     courseId,
     courseName,
     moduleName,
+    moduleDescription,
     moduleOrder,
     lessonOrder,
   } = body || {};
@@ -189,6 +190,7 @@ bridge.post('/v1/bridge/lesson', bridgeAuth, async (c) => {
     // un-assigning a module in WordPress is reflected on re-publish rather than
     // leaving a stale module name from a prior publish.
     module: moduleName || null,
+    moduleDescription: moduleName ? (moduleDescription || null) : null,
     moduleOrder: Number.isFinite(moduleOrder) ? moduleOrder : null,
     order: Number.isFinite(lessonOrder) ? lessonOrder : null,
   };

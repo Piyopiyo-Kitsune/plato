@@ -39,6 +39,16 @@ class Agentic_Coach_Sync {
 	 */
 	public function register() {
 		add_action( 'rest_api_init', array( $this, 'routes' ) );
+		// Auto-sync already-published lessons when they're edited (block editor /
+		// REST save), so module/order/content changes reach the coach without a
+		// manual re-publish. `rest_after_insert_*` fires after the lesson's meta
+		// (including its module) has been saved.
+		add_action( 'rest_after_insert_' . Agentic_Coach_Content_Types::LESSON, array( $this, 'on_rest_save' ), 10, 1 );
+		add_action( 'rest_after_insert_' . Agentic_Coach_Sensei::LESSON, array( $this, 'on_rest_save' ), 10, 1 );
+		// Editing a module (its description, order, or title) re-syncs the
+		// already-published lessons assigned to it, so those changes reach the
+		// coach without re-saving each lesson by hand.
+		add_action( 'rest_after_insert_' . Agentic_Coach_Content_Types::MODULE, array( $this, 'on_module_save' ), 10, 1 );
 	}
 
 	/**
@@ -120,12 +130,17 @@ class Agentic_Coach_Sync {
 		if ( ! $module_post_id ) {
 			return array(
 				'name'         => null,
+				'description'  => null,
 				'module_order' => null,
 				'lesson_order' => (int) get_post_meta( $post->ID, '_agentic_order', true ),
 			);
 		}
+		// Plain-text description from the module post's content — shown to learners
+		// between the module title and its lessons in the course-detail view.
+		$description = trim( wp_strip_all_tags( strip_shortcodes( (string) get_post_field( 'post_content', $module_post_id ) ) ) );
 		return array(
 			'name'         => get_the_title( $module_post_id ),
+			'description'  => '' !== $description ? $description : null,
 			'module_order' => (int) get_post_meta( $module_post_id, '_agentic_order', true ),
 			'lesson_order' => (int) get_post_meta( $post->ID, '_agentic_order', true ),
 		);
@@ -144,6 +159,23 @@ class Agentic_Coach_Sync {
 			return new WP_Error( 'agentic_coach_not_lesson', __( 'Not a coaching lesson.', 'agentic-coach' ), array( 'status' => 400 ) );
 		}
 
+		$result = $this->push_lesson( $post );
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error( $result->get_error_code(), $result->get_error_message(), array( 'status' => 502 ) );
+		}
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Push a lesson (its course + module + content) to Plato and store the
+	 * returned mapping on the post. Shared by the manual "Publish Lesson" action
+	 * and the auto-sync-on-save hook.
+	 *
+	 * @param WP_Post $post Lesson post.
+	 * @return array|WP_Error { platoLessonId, platoCourseId, courseLinked } or error.
+	 */
+	private function push_lesson( $post ) {
+		$post_id         = $post->ID;
 		$plato_lesson_id = $this->plato->content_id( 'l', $post_id );
 
 		$course_post_id = $this->course_post_id( $post );
@@ -161,16 +193,16 @@ class Agentic_Coach_Sync {
 				'name'            => $post->post_title,
 				'markdown'        => $this->compose_markdown( $post ),
 				'status'          => 'publish' === $post->post_status ? 'public' : 'draft',
-				'course_id'       => $course_id,
-				'course_name'     => $course_name,
-				'module_name'     => $module['name'],
-				'module_order'    => $module['module_order'],
-				'lesson_order'    => $module['lesson_order'],
+				'course_id'          => $course_id,
+				'course_name'        => $course_name,
+				'module_name'        => $module['name'],
+				'module_description' => $module['description'],
+				'module_order'       => $module['module_order'],
+				'lesson_order'       => $module['lesson_order'],
 			)
 		);
-
 		if ( is_wp_error( $result ) ) {
-			return new WP_Error( $result->get_error_code(), $result->get_error_message(), array( 'status' => 502 ) );
+			return $result;
 		}
 
 		update_post_meta( $post_id, '_plato_lesson_id', $plato_lesson_id );
@@ -178,13 +210,65 @@ class Agentic_Coach_Sync {
 			update_post_meta( $post_id, '_plato_course_id', $course_id );
 		}
 
-		return rest_ensure_response(
+		return array(
+			'platoLessonId' => $plato_lesson_id,
+			'platoCourseId' => $course_id,
+			'courseLinked'  => '' !== $course_id,
+		);
+	}
+
+	/**
+	 * Keep Plato in sync when an already-published lesson is edited — so changing
+	 * a lesson's module, order, or content in WordPress reaches the coach without
+	 * a manual re-publish. Fires on `rest_after_insert_*` (after the block editor
+	 * has saved the lesson's meta, including its module). Only re-publishes
+	 * lessons already linked to Plato (they carry `_plato_lesson_id`); it never
+	 * auto-publishes a lesson the author hasn't chosen to publish. Best-effort:
+	 * failures are swallowed here and surface on the next manual publish.
+	 *
+	 * @param WP_Post $post Lesson post.
+	 * @return void
+	 */
+	public function on_rest_save( $post ) {
+		if ( ! ( $post instanceof WP_Post ) || ! self::is_publishable( $post->post_type ) ) {
+			return;
+		}
+		if ( ! get_post_meta( $post->ID, '_plato_lesson_id', true ) ) {
+			return; // Not published to the coach yet — respect the author's choice.
+		}
+		$this->push_lesson( $post );
+	}
+
+	/**
+	 * Re-sync every already-published lesson assigned to a module when that module
+	 * is saved — so a module's description/order/title change reaches the coach.
+	 *
+	 * @param WP_Post $module_post Module post.
+	 * @return void
+	 */
+	public function on_module_save( $module_post ) {
+		if ( ! ( $module_post instanceof WP_Post ) || Agentic_Coach_Content_Types::MODULE !== $module_post->post_type ) {
+			return;
+		}
+		$lesson_ids = get_posts(
 			array(
-				'platoLessonId' => $plato_lesson_id,
-				'platoCourseId' => $course_id,
-				'courseLinked'  => '' !== $course_id,
+				'post_type'   => Agentic_Coach_Content_Types::LESSON,
+				'post_status' => array( 'publish', 'draft' ),
+				'numberposts' => 200,
+				'fields'      => 'ids',
+				'meta_key'    => '_agentic_module', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bounded authoring action.
+				'meta_value'  => $module_post->ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- bounded authoring action.
 			)
 		);
+		foreach ( $lesson_ids as $lesson_id ) {
+			if ( ! get_post_meta( $lesson_id, '_plato_lesson_id', true ) ) {
+				continue;
+			}
+			$lesson = get_post( $lesson_id );
+			if ( $lesson ) {
+				$this->push_lesson( $lesson );
+			}
+		}
 	}
 
 	/**
