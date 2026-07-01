@@ -9,12 +9,13 @@
  *
  * Resolution priority (highest first):
  *   1. The learner's explicit choice (persisted in `preferences.language`).
- *   2. The browser's language (`navigator.languages`).
- *   3. Site default — English.
+ *   2. The WordPress account locale, forwarded via the SSO bridge and stored as
+ *      `preferences.wpLocale` (embedded learners get their WP language by default).
+ *   3. The browser's language (`navigator.languages`).
+ *   4. Site default — English.
  *
  * We deliberately do NOT use geo/IP detection (a poor, privacy-unfriendly proxy
- * for language). Forwarding the WordPress account locale through the bridge as a
- * priority-2 signal is a documented follow-up.
+ * for language).
  */
 
 // `code` is the short tag we persist and match against browser locales; `label`
@@ -47,10 +48,12 @@ export function normalizeLanguageCode(raw) {
   return BY_CODE.has(base) ? base : null;
 }
 
-/** Resolve the learner's language code from preferences → browser → English. */
+/** Resolve the learner's language: explicit → WP locale → browser → English. */
 export function resolveLanguageCode(prefs) {
   const explicit = normalizeLanguageCode(prefs?.language);
   if (explicit) return explicit;
+  const wp = normalizeLanguageCode(prefs?.wpLocale);
+  if (wp) return wp;
   if (typeof navigator !== 'undefined') {
     const candidates = navigator.languages && navigator.languages.length
       ? navigator.languages

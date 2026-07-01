@@ -1,4 +1,4 @@
-import { saveAuthTokens, saveAuthUser } from '../../js/storage.js';
+import { saveAuthTokens, saveAuthUser, getPreferences, savePreferences } from '../../js/storage.js';
 
 /**
  * Exchange a one-time WordPress bridge code for Plato tokens and seed them into
@@ -21,5 +21,14 @@ export async function exchangeBridgeCode(code) {
   const data = await res.json();
   await saveAuthTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
   if (data.user) await saveAuthUser(data.user);
+  // Record the WordPress account locale as a default language signal (priority 2,
+  // below the learner's explicit choice). Only write when it changed, to avoid a
+  // needless sync on every boot.
+  if (data.locale) {
+    const prefs = (await getPreferences()) || {};
+    if (prefs.wpLocale !== data.locale) {
+      await savePreferences({ ...prefs, wpLocale: data.locale });
+    }
+  }
   return data;
 }

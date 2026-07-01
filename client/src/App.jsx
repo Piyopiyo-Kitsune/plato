@@ -141,8 +141,10 @@ export default function App() {
               <Routes>
                 <Route path="/courses" element={<CoursesList />} />
                 <Route path="/courses/:courseId" element={<LessonsList />} />
-                <Route path="/lessons" element={<LessonsList />} />
-                <Route path="/lessons/create" element={<Navigate to="/lessons" replace />} />
+                {/* The flat "all lessons" page is never shown to learners — they
+                    browse by course. Redirect any lingering link to Courses. */}
+                <Route path="/lessons" element={<Navigate to="/courses" replace />} />
+                <Route path="/lessons/create" element={<Navigate to="/courses" replace />} />
                 <Route path="/lessons/:lessonGroupId" element={<LessonChat />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/" element={<Navigate to="/courses" replace />} />

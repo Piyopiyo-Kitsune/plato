@@ -76,7 +76,7 @@ async function ensureBridgeUser({ siteId, wpUserId, displayName }) {
 // POST /v1/bridge/token — signed, server-to-server (WordPress → Plato).
 // Provisions the learner and returns a single-use embed code.
 bridge.post('/v1/bridge/token', bridgeAuth, async (c) => {
-  const { siteId, wpUserId, displayName, lessonId } = c.get('bridge');
+  const { siteId, wpUserId, displayName, locale, lessonId } = c.get('bridge');
 
   let user;
   try {
@@ -90,6 +90,7 @@ bridge.post('/v1/bridge/token', bridgeAuth, async (c) => {
   await db.putSyncData('_system', `bridge-code:${code}`, {
     userId: user.userId,
     lessonId: lessonId || null,
+    locale: locale || null,
     siteId,
     expiresAt,
   });
@@ -137,6 +138,7 @@ bridge.post('/v1/bridge/exchange', async (c) => {
     accessToken,
     refreshToken,
     lessonId: rec.data.lessonId || null,
+    locale: rec.data.locale || null,
     user: { userId: user.userId, username: user.username, name: user.name, role: user.role },
   });
 });

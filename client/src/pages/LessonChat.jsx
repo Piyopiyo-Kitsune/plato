@@ -69,6 +69,8 @@ export default function LessonChat() {
 
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState(null);
+  // Bumped by "Reset Lesson" to re-run the start effect in place (see below).
+  const [resetNonce, setResetNonce] = useState(0);
   const [showObjectives, setShowObjectives] = useState(false);
   const objectivesTitleRef = useRef(null);
   const [headerPinned, setHeaderPinned] = useState(false);
@@ -214,7 +216,7 @@ export default function LessonChat() {
     })();
 
     return () => { cancelled = true; };
-  }, [lessonGroupId, lessonLoaded, impersonating]);
+  }, [lessonGroupId, lessonLoaded, impersonating, resetNonce]);
 
   const handleSend = useCallback(async ({ text, imageDataUrls, links }) => {
     const hasImages = Array.isArray(imageDataUrls) && imageDataUrls.length > 0;
@@ -295,7 +297,19 @@ export default function LessonChat() {
       title: 'Reset Lesson?',
       message: "This will delete all progress. You'll start from scratch.",
       confirmLabel: 'Reset Lesson',
-      onConfirm: async () => { await deleteLessonProgress(lessonGroupId); navigate('/lessons'); },
+      // Clear progress and restart the lesson in place — the learner stays on
+      // this lesson rather than being sent to a list. Resetting local state and
+      // bumping resetNonce re-runs the start effect, which (finding no saved
+      // progress) starts the lesson fresh.
+      onConfirm: async () => {
+        await deleteLessonProgress(lessonGroupId);
+        setMessages([]);
+        setLessonKB(null);
+        setPhase(null);
+        setError('');
+        setStreamingText(null);
+        setResetNonce((n) => n + 1);
+      },
     });
   };
 
@@ -305,11 +319,13 @@ export default function LessonChat() {
       message: 'This will permanently delete this lesson and all its progress.',
       confirmLabel: 'Delete Lesson',
       onConfirm: async () => {
+        const courseId = lesson?.course?.id;
         await deleteLessonProgress(lessonGroupId);
         await deleteUserLesson(lessonGroupId);
         invalidateLessonsCache();
         dispatch({ type: 'REFRESH_LESSONS', lessons: await loadLessons() });
-        navigate('/lessons');
+        // The lesson is gone — return to its course (never the all-lessons list).
+        navigate(courseId ? `/courses/${courseId}` : '/courses');
       },
     });
   };

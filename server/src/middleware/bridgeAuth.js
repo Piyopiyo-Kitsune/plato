@@ -54,7 +54,7 @@ export async function bridgeAuth(c, next) {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { siteId, wpUserId, email, displayName, lessonId, ts, sig } = body || {};
+  const { siteId, wpUserId, email, displayName, locale, lessonId, ts, sig } = body || {};
   if (!siteId || !wpUserId || !ts || !sig) {
     return c.json({ error: 'siteId, wpUserId, ts, and sig are required' }, 400);
   }
@@ -83,6 +83,8 @@ export async function bridgeAuth(c, next) {
     wpUserId: String(wpUserId),
     email: email ? String(email) : null,
     displayName: displayName ? String(displayName) : null,
+    // Advisory, unsigned (like email/displayName) — a default language signal.
+    locale: locale ? String(locale) : null,
     lessonId: lessonId ? String(lessonId) : null,
     ts: tsNum,
   });

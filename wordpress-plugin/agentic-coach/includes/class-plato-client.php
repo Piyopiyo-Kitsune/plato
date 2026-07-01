@@ -89,6 +89,9 @@ class Agentic_Coach_Plato_Client {
 			'lessonId'    => $lesson_id,
 			'displayName' => $user->display_name,
 			'email'       => $send_email ? $user->user_email : null,
+			// The learner's WordPress locale (e.g. "es_ES") becomes the default
+			// coaching language in Plato until they pick one. Advisory + unsigned.
+			'locale'      => get_user_locale( $user_id ),
 			'ts'          => $ts,
 			'sig'         => $this->sign( $site_id, $wp_user_id, $lesson_id, $ts ),
 		);

@@ -41,6 +41,9 @@ in sync-data (`enrollments` key; `getEnrollments`/`saveEnrollments` in
 `client/js/storage.js`). Each All-Courses card has an **Enroll / Enrolled** toggle
 button (`aria-pressed`); My Courses shows only the enrolled subset with an empty
 state that links back to All Courses. Uncategorized is never enrollable.
+Unenrolling asks for confirmation first. (Persistence fix: `enrollments` had to be
+added to the server's `VALID_DATA_KEYS` allowlist in `sync.js` — otherwise the write
+was rejected and enrollment didn't survive a page refresh.)
 
 **Follow-up — map to WordPress/Sensei enrollment (the notes below still apply):**
 today enrollment is Plato-local. To make WordPress the source of truth, seed/merge
@@ -119,9 +122,11 @@ needed. The *conversation* adapts immediately; authored lesson content
   - Always-visible language switcher in the `AppShell` header (works standalone
     and embedded), persisting to `preferences.language`.
   - Verified end-to-end with a live LLM turn (coach opened in Spanish, then French).
-  - **Follow-up:** forward the WordPress account locale (`get_user_locale()`) through
-    the bridge as the priority-2 signal (between explicit choice and browser), so
-    embedded learners get their WP language by default without picking it.
+  - **WP account locale via bridge ✅ DONE.** `mint_embed_code` forwards
+    `get_user_locale()` (advisory, unsigned); the bridge stores it on the code and
+    returns it from `/exchange`; `bridgeBoot` saves it as `preferences.wpLocale`;
+    `resolveLanguageCode` uses it as priority 2 (explicit → wpLocale → browser →
+    English). Verified: `es_ES` round-trips and resolves to Spanish.
 - **Phase 2:** localize the Plato UI chrome (buttons, labels) with an i18n library
   (e.g. react-i18next) and translation catalogs.
 - **Phase 3 (optional):** offer to auto-translate authored lesson content, or let
