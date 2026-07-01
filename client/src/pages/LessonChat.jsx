@@ -317,6 +317,12 @@ export default function LessonChat() {
   if (!state.loaded) return <div className="flex items-center justify-center py-12 text-muted-foreground" role="status" aria-live="polite">Loading...</div>;
   if (!lesson) return <p className="p-4 text-muted-foreground">Lesson not found.</p>;
   const busy = !!loading;
+
+  // The back arrow returns to the lesson's course (where the learner came from),
+  // not the flat all-lessons list. Falls back to the courses home when the
+  // lesson has no course.
+  const backTarget = lesson.course?.id ? `/courses/${lesson.course.id}` : '/courses';
+  const backLabel = lesson.course?.name ? `Back to ${lesson.course.name}` : 'Back to courses';
   const composePlaceholder = phase === LESSON_PHASES.COMPLETED
     ? 'Share feedback about this lesson...'
     : 'Chat with your coach...';
@@ -383,7 +389,7 @@ export default function LessonChat() {
       {headerPinned && (
         <div id="lesson-header-pinned" aria-hidden="true" className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background px-4 py-2 shadow-md">
           <div className="mx-auto max-w-5xl flex items-center gap-2">
-            <Button variant="ghost" size="icon-sm" aria-label="Back to lessons" onClick={() => navigate('/lessons')}>
+            <Button variant="ghost" size="icon-sm" aria-label={backLabel} onClick={() => navigate(backTarget)}>
               &larr;
             </Button>
             <div className="flex-1 min-w-0">
@@ -422,7 +428,7 @@ export default function LessonChat() {
       {/* Inline header — observed for scroll position */}
       <div ref={headerRef} id="lesson-header" className="border-b border-border bg-background px-4 py-2">
         <div className="mx-auto max-w-5xl flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm" aria-label="Back to lessons" onClick={() => navigate('/lessons')}>
+          <Button variant="ghost" size="icon-sm" aria-label={backLabel} onClick={() => navigate(backTarget)}>
             &larr;
           </Button>
           <div className="flex-1 min-w-0">
@@ -483,11 +489,11 @@ export default function LessonChat() {
               ) : (
                 <Button
                   size="lg"
-                  onClick={() => navigate('/lessons')}
+                  onClick={() => navigate(backTarget)}
                   className="min-w-[200px]"
-                  aria-label="Back to lesson list"
+                  aria-label={backLabel}
                 >
-                  Back to Lesson List
+                  {lesson.course?.id ? 'Back to Course' : 'Back to Courses'}
                 </Button>
               )}
             </div>

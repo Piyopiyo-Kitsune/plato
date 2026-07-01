@@ -65,6 +65,11 @@ export default function ImageConsentDialog({ open, onAgree, onCancel }) {
 
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>
+            <strong className="text-foreground">What to upload:</strong> screenshots or photos of
+            your own lesson work — for example your WordPress screen, a setting you&apos;re stuck
+            on, or an error message you&apos;d like help with.
+          </li>
+          <li>
             <strong className="text-foreground">What it&apos;s for:</strong> images you upload
             are used only to help the coach review your lesson work.
           </li>

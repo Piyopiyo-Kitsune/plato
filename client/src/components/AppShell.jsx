@@ -124,20 +124,33 @@ export default function AppShell({ children }) {
           </a>
           <div className="flex-1" />
           {embedded ? (
-            /* Embedded: identity is the WordPress account. Greet by name and
-               offer only the data & privacy controls — no email, no sign-out. */
-            <div className="flex items-center gap-2">
-              {user?.name ? (
-                <span className="text-sm opacity-90">Hi, {user.name}</span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => navigate('/settings')}
-                className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-              >
-                Your data &amp; privacy
-              </button>
-            </div>
+            /* Embedded: identity is the WordPress account. A "Hi, {name}" menu
+               offers only the data & privacy controls — no email, no sign-out. */
+            <DropdownMenuRadix.Root>
+              <DropdownMenuRadix.Trigger asChild>
+                <button
+                  type="button"
+                  className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
+                  aria-label={user?.name ? `Menu for ${user.name}` : 'Menu'}
+                >
+                  {user?.name ? `Hi, ${user.name}` : 'Menu'}
+                </button>
+              </DropdownMenuRadix.Trigger>
+              <DropdownMenuRadix.Portal>
+                <DropdownMenuRadix.Content
+                  align="end"
+                  sideOffset={4}
+                  className="z-50 min-w-[180px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
+                >
+                  <DropdownMenuRadix.Item
+                    className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
+                    onSelect={() => navigate('/settings')}
+                  >
+                    Your data &amp; privacy
+                  </DropdownMenuRadix.Item>
+                </DropdownMenuRadix.Content>
+              </DropdownMenuRadix.Portal>
+            </DropdownMenuRadix.Root>
           ) : (
             <DropdownMenuRadix.Root>
               <DropdownMenuRadix.Trigger asChild>

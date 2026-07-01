@@ -182,12 +182,29 @@ export default function ComposeBar({
     setConsentOpen(true);
   };
 
+  // Opening the file picker is itself "accessing your files", so gate it behind
+  // consent BEFORE the OS dialog appears. If already consented, open directly.
+  const handleAttachClick = () => {
+    if (hasImageConsent()) {
+      fileRef.current?.click();
+    } else {
+      pendingFilesRef.current = null; // no files yet — this is a pre-pick gate
+      setConsentOpen(true);
+    }
+  };
+
   const handleImageConsentAgree = () => {
     setConsentOpen(false);
     const pending = pendingFilesRef.current;
     pendingFilesRef.current = null;
-    if (pending && pending.length) addImagesFromFiles(pending);
-    requestAnimationFrame(() => inputRef.current?.focus());
+    if (pending && pending.length) {
+      // Files already in hand (e.g. paste) — process them now.
+      addImagesFromFiles(pending);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else {
+      // Consent granted from the attach button — now open the file picker.
+      requestAnimationFrame(() => fileRef.current?.click());
+    }
   };
 
   const handleImageConsentCancel = () => {
@@ -403,7 +420,7 @@ export default function ComposeBar({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => fileRef.current?.click()}
+                onClick={handleAttachClick}
                 disabled={disabled || images.length >= MAX_IMAGES}
                 aria-label={images.length >= MAX_IMAGES
                   ? `Maximum ${MAX_IMAGES} images attached`

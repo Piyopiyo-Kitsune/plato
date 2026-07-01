@@ -5,6 +5,10 @@ import { getEnrollments, saveEnrollments } from '../../js/storage.js';
 import Check from 'lucide-react/dist/esm/icons/check';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 
 // Sentinel route segment for lessons with no course assigned.
 const UNCATEGORIZED = 'none';
@@ -34,6 +38,7 @@ export default function CoursesList() {
 
   const [view, setView] = useState(VIEW_ALL);
   const [enrolled, setEnrolled] = useState([]);
+  const [unenrollTarget, setUnenrollTarget] = useState(null);
 
   useEffect(() => {
     (async () => setEnrolled(await getEnrollments()))();
@@ -59,12 +64,27 @@ export default function CoursesList() {
 
   const enrolledSet = useMemo(() => new Set(enrolled), [enrolled]);
 
-  const toggleEnroll = async (courseId) => {
-    const next = enrolledSet.has(courseId)
-      ? enrolled.filter((id) => id !== courseId)
-      : [...enrolled, courseId];
+  const enroll = async (courseId) => {
+    const next = [...enrolled, courseId];
     setEnrolled(next);
     await saveEnrollments(next);
+  };
+
+  const toggleEnroll = (courseId, name) => {
+    // Enrolling is one click; leaving a course asks for confirmation first.
+    if (enrolledSet.has(courseId)) {
+      setUnenrollTarget({ id: courseId, name });
+    } else {
+      enroll(courseId);
+    }
+  };
+
+  const confirmUnenroll = async () => {
+    if (!unenrollTarget) return;
+    const next = enrolled.filter((id) => id !== unenrollTarget.id);
+    setEnrolled(next);
+    await saveEnrollments(next);
+    setUnenrollTarget(null);
   };
 
   // Which cards this view shows. "My Courses" is the enrolled subset (real
@@ -146,7 +166,7 @@ export default function CoursesList() {
                 count={c.count}
                 enrolled={enrolledSet.has(c.id)}
                 onOpen={() => navigate(`/courses/${c.id}`)}
-                onToggleEnroll={() => toggleEnroll(c.id)}
+                onToggleEnroll={() => toggleEnroll(c.id, c.name)}
               />
             </li>
           ))}
@@ -161,6 +181,28 @@ export default function CoursesList() {
           )}
         </ul>
       )}
+
+      <Dialog open={!!unenrollTarget} onOpenChange={(open) => { if (!open) setUnenrollTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Leave this course?</DialogTitle>
+            <DialogDescription>
+              {unenrollTarget
+                ? `“${unenrollTarget.name}” will be removed from My Courses. Your progress and chat history are kept — you can re-enroll anytime.`
+                : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUnenrollTarget(null)}>Cancel</Button>
+            <Button
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmUnenroll}
+            >
+              Leave course
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
