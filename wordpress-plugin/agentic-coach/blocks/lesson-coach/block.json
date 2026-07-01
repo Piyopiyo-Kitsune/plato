@@ -5,7 +5,7 @@
 	"version": "0.1.0",
 	"title": "WordPress Coach",
 	"category": "embed",
-	"icon": "welcome-learn-more",
+	"icon": "format-chat",
 	"description": "Embed a Plato-powered agentic coach — a single lesson or the full courses home.",
 	"textdomain": "agentic-coach",
 	"supports": {

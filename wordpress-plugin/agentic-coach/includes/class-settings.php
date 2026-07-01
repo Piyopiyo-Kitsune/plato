@@ -236,12 +236,12 @@ class Agentic_Coach_Settings {
 				<div class="notice notice-success is-dismissible"><p><?php esc_html_e( 'Settings saved.', 'agentic-coach' ); ?></p></div>
 			<?php endif; ?>
 			<p>
-				<?php esc_html_e( 'These settings connect WordPress to your Plato server. For security, the AI provider key (e.g. Anthropic or Amazon Bedrock) that powers the coach is configured in Plato — not here — so it is never exposed to WordPress or the browser.', 'agentic-coach' ); ?>
+				<?php esc_html_e( 'These settings connect WordPress to your coach server. For security, the AI provider key (e.g. Anthropic or Amazon Bedrock) that powers the coach is configured on the coach server — not here — so it is never exposed to WordPress or the browser.', 'agentic-coach' ); ?>
 			</p>
 			<div class="notice notice-info inline">
 				<p>
 					<strong><?php esc_html_e( 'Where is the AI API key?', 'agentic-coach' ); ?></strong>
-					<?php esc_html_e( 'Set it on the Plato server: ANTHROPIC_API_KEY (or AI_PROVIDER=bedrock with AWS credentials) in Plato\'s environment. The only secret stored here is the bridge shared secret used to authenticate WordPress to Plato.', 'agentic-coach' ); ?>
+					<?php esc_html_e( 'Set it on the coach server: ANTHROPIC_API_KEY (or AI_PROVIDER=bedrock with AWS credentials) in the coach server\'s environment. The only secret stored here is the bridge shared secret used to authenticate WordPress to the coach server.', 'agentic-coach' ); ?>
 				</p>
 			</div>
 			<form method="post" action="<?php echo esc_url( $action_url ); ?>">
@@ -249,17 +249,17 @@ class Agentic_Coach_Settings {
 				<?php wp_nonce_field( 'agentic_coach_save', 'agentic_coach_nonce' ); ?>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="agentic_coach_plato_url"><?php esc_html_e( 'Plato server URL', 'agentic-coach' ); ?></label></th>
+						<th scope="row"><label for="agentic_coach_plato_url"><?php esc_html_e( 'Coach server URL', 'agentic-coach' ); ?></label></th>
 						<td>
-							<input name="plato_url" id="agentic_coach_plato_url" type="url" class="regular-text" value="<?php echo esc_attr( $all['plato_url'] ); ?>" placeholder="https://plato.example.org" />
-							<p class="description"><?php esc_html_e( 'Base URL of your Plato deployment.', 'agentic-coach' ); ?></p>
+							<input name="plato_url" id="agentic_coach_plato_url" type="url" class="regular-text" value="<?php echo esc_attr( $all['plato_url'] ); ?>" placeholder="https://coach.example.org" />
+							<p class="description"><?php esc_html_e( 'Base URL of your coach server.', 'agentic-coach' ); ?></p>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row"><label for="agentic_coach_site_id"><?php esc_html_e( 'Site identifier', 'agentic-coach' ); ?></label></th>
 						<td>
 							<input name="site_id" id="agentic_coach_site_id" type="url" class="regular-text" value="<?php echo esc_attr( $all['site_id'] ); ?>" />
-							<p class="description"><?php esc_html_e( 'Sent to Plato to identify this site. Must be on Plato\'s allowlist (BRIDGE_ALLOWED_SITES).', 'agentic-coach' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Sent to the coach server to identify this site. Must be on its allowlist (BRIDGE_ALLOWED_SITES).', 'agentic-coach' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -270,7 +270,7 @@ class Agentic_Coach_Settings {
 								<?php
 								echo $has_secret
 									? esc_html__( 'A secret is stored. Leave blank to keep it, or enter a new value to replace it.', 'agentic-coach' )
-									: esc_html__( 'Must match BRIDGE_SHARED_SECRET on the Plato server.', 'agentic-coach' );
+									: esc_html__( 'Must match BRIDGE_SHARED_SECRET on the coach server.', 'agentic-coach' );
 								?>
 							</p>
 						</td>
@@ -280,7 +280,7 @@ class Agentic_Coach_Settings {
 						<td>
 							<label>
 								<input name="mcp_enabled" type="checkbox" value="1" <?php checked( ! empty( $all['mcp_enabled'] ) ); ?> />
-								<?php esc_html_e( 'Allow Plato to read this site\'s lesson/course context via the MCP adapter.', 'agentic-coach' ); ?>
+								<?php esc_html_e( 'Allow the coach server to read this site\'s lesson/course context via the MCP adapter.', 'agentic-coach' ); ?>
 							</label>
 						</td>
 					</tr>

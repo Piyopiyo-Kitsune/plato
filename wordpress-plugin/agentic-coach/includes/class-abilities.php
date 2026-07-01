@@ -72,7 +72,7 @@ class Agentic_Coach_Abilities {
 			self::CATEGORY,
 			array(
 				'label'       => __( 'WordPress Coach', 'agentic-coach' ),
-				'description' => __( 'Lesson and course context for the Plato coach.', 'agentic-coach' ),
+				'description' => __( 'Lesson and course context for the coach.', 'agentic-coach' ),
 			)
 		);
 	}
@@ -117,7 +117,7 @@ class Agentic_Coach_Abilities {
 			array(
 				'category'            => self::CATEGORY,
 				'label'               => __( 'Get lesson context', 'agentic-coach' ),
-				'description'         => __( 'Returns the markdown, objectives, exemplar, coach directive, and course/module for a lesson — for Plato to read over MCP.', 'agentic-coach' ),
+				'description'         => __( 'Returns the markdown, objectives, exemplar, coach directive, and course/module for a lesson — for the coach to read over MCP.', 'agentic-coach' ),
 				'input_schema'        => array(
 					'type'       => 'object',
 					'properties' => array( 'lessonId' => array( 'type' => 'integer' ) ),

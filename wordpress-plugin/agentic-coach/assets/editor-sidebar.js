@@ -22,7 +22,7 @@
 	var Spinner = wp.components.Spinner;
 	var Notice = wp.components.Notice;
 
-	function PublishToPlato() {
+	function PublishLesson() {
 		var busyState = useState( false );
 		var busy = busyState[ 0 ];
 		var setBusy = busyState[ 1 ];
@@ -43,8 +43,8 @@
 					setMsg( {
 						status: 'success',
 						text: data && data.courseLinked
-							? __( 'Published to Plato and linked to its course — cross-lesson memory will span this course.', 'agentic-coach' )
-							: __( 'Published to Plato. Assign this lesson to a course so the coach remembers across lessons.', 'agentic-coach' ),
+							? __( 'Lesson published and linked to its course — cross-lesson memory will span this course.', 'agentic-coach' )
+							: __( 'Lesson published. Assign this lesson to a course so the coach remembers across lessons.', 'agentic-coach' ),
 					} );
 				} )
 				.catch( function ( err ) {
@@ -58,11 +58,11 @@
 		return el(
 			'div',
 			{ style: { padding: '16px', borderBottom: '1px solid #e0e0e0' } },
-			el( 'p', {}, __( 'Push this lesson to Plato so it can be embedded and coached.', 'agentic-coach' ) ),
+			el( 'p', {}, __( 'Publish this lesson so it can be embedded and coached.', 'agentic-coach' ) ),
 			el(
 				Button,
 				{ variant: 'secondary', onClick: publish, disabled: busy },
-				busy ? el( Spinner, {} ) : __( 'Publish to Plato', 'agentic-coach' )
+				busy ? el( Spinner, {} ) : __( 'Publish Lesson', 'agentic-coach' )
 			),
 			msg ? el( Notice, { status: msg.status, isDismissible: false }, msg.text ) : null
 		);
@@ -138,13 +138,13 @@
 				{},
 				el(
 					PluginSidebarMoreMenuItem,
-					{ target: 'agentic-coach-sidebar' },
+					{ target: 'agentic-coach-sidebar', icon: 'format-chat' },
 					__( 'WordPress Coach', 'agentic-coach' )
 				),
 				el(
 					PluginSidebar,
-					{ name: 'agentic-coach-sidebar', title: __( 'WordPress Coach', 'agentic-coach' ) },
-					el( wp.element.Fragment, {}, el( PublishToPlato, {} ), el( SidebarContent, {} ) )
+					{ name: 'agentic-coach-sidebar', title: __( 'WordPress Coach', 'agentic-coach' ), icon: 'format-chat' },
+					el( wp.element.Fragment, {}, el( PublishLesson, {} ), el( SidebarContent, {} ) )
 				)
 			);
 		},

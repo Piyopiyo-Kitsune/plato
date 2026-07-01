@@ -75,7 +75,7 @@ class Agentic_Coach_MCP_Server {
 				'agentic-coach',
 				'mcp',
 				__( 'WordPress Coach', 'agentic-coach' ),
-				__( 'Lesson and course context for the Plato coach.', 'agentic-coach' ),
+				__( 'Lesson and course context for the coach.', 'agentic-coach' ),
 				AGENTIC_COACH_VERSION,
 				array( $transport ),
 				$error_handler,

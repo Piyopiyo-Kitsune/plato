@@ -49,7 +49,7 @@
 		return el(
 			PluginDocumentSettingPanel,
 			{ name: 'agentic-coach-content', title: __( 'Coaching content', 'agentic-coach' ) },
-			el( 'p', { style: { marginTop: 0 } }, __( 'What the coach guides the learner to achieve. Sent to Plato when you publish.', 'agentic-coach' ) ),
+			el( 'p', { style: { marginTop: 0 } }, __( 'What the coach guides the learner to achieve. Sent to the coach service when you publish.', 'agentic-coach' ) ),
 			el( TextareaControl, {
 				label: __( 'Lesson excerpt', 'agentic-coach' ),
 				help: sprintf(

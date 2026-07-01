@@ -108,7 +108,7 @@ class Agentic_Coach_Block {
 			if ( ! $this->settings->is_configured() ) {
 				$this->render_notice( __( 'The WordPress Coach is not configured yet.', 'agentic-coach' ), current_user_can( 'manage_options' ) );
 			} elseif ( 'lesson' === $mode && ! $plato_lesson_id ) {
-				$this->render_notice( __( 'This lesson has not been published to Plato yet.', 'agentic-coach' ), current_user_can( 'edit_posts' ) );
+				$this->render_notice( __( 'This lesson has not been published yet.', 'agentic-coach' ), current_user_can( 'edit_posts' ) );
 			} elseif ( ! is_user_logged_in() ) {
 				$this->render_login_prompt();
 			} elseif ( 'home' === $mode ) {

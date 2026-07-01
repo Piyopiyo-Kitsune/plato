@@ -101,7 +101,7 @@ class Agentic_Coach_Plato_Client {
 			return $result;
 		}
 		if ( empty( $result['code'] ) ) {
-			return new WP_Error( 'agentic_coach_bad_response', __( 'Plato did not return an embed code.', 'agentic-coach' ) );
+			return new WP_Error( 'agentic_coach_bad_response', __( 'The coach server did not return an embed code.', 'agentic-coach' ) );
 		}
 		return $result;
 	}
@@ -235,7 +235,7 @@ class Agentic_Coach_Plato_Client {
 		if ( $status < 200 || $status >= 300 ) {
 			$message = is_array( $data ) && ! empty( $data['error'] )
 				? $data['error']
-				: sprintf( /* translators: %d: HTTP status code. */ __( 'Plato returned HTTP %d.', 'agentic-coach' ), $status );
+				: sprintf( /* translators: %d: HTTP status code. */ __( 'The coach server returned HTTP %d.', 'agentic-coach' ), $status );
 			return new WP_Error( 'agentic_coach_http', $message, array( 'status' => $status ) );
 		}
 

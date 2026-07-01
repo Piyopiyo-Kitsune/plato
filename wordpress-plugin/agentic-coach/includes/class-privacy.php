@@ -48,7 +48,7 @@ class Agentic_Coach_Privacy {
 		if ( ! function_exists( 'wp_add_privacy_policy_content' ) ) {
 			return;
 		}
-		$content = __( 'When you use an embedded WordPress Coach, your coaching conversation and progress are processed by the connected Plato service under a pseudonymous identifier derived from your account. Your email address is only shared if the site administrator has enabled it.', 'agentic-coach' );
+		$content = __( 'When you use an embedded WordPress Coach, your coaching conversation and progress are processed by the connected coaching service under a pseudonymous identifier derived from your account. Your email address is only shared if the site administrator has enabled it.', 'agentic-coach' );
 		wp_add_privacy_policy_content( __( 'WordPress Coach', 'agentic-coach' ), wp_kses_post( wpautop( $content ) ) );
 	}
 
@@ -96,7 +96,7 @@ class Agentic_Coach_Privacy {
 				'item_id'     => 'agentic-coach-' . $user->ID,
 				'data'        => array(
 					array(
-						'name'  => __( 'Plato coaching account', 'agentic-coach' ),
+						'name'  => __( 'Coaching account', 'agentic-coach' ),
 						'value' => __( 'A pseudonymous learner record holds your coaching chat history and course progress.', 'agentic-coach' ),
 					),
 				),

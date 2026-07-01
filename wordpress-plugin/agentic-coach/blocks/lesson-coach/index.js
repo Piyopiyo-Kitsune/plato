@@ -106,7 +106,7 @@
 							? el( Notice, { status: 'info', isDismissible: false }, __( 'Learners see the coach home with all their courses. No lesson to select.', 'agentic-coach' ) )
 							: null,
 						notPublished
-							? el( Notice, { status: 'warning', isDismissible: false }, __( 'This lesson is not published to Plato yet.', 'agentic-coach' ) )
+							? el( Notice, { status: 'warning', isDismissible: false }, __( 'This lesson is not published yet.', 'agentic-coach' ) )
 							: null
 					),
 					el(
@@ -145,7 +145,7 @@
 							isHome
 								? __( 'The coach home (all courses) will be embedded here.', 'agentic-coach' )
 								: ( attributes.lessonId
-									? __( 'A Plato coach will be embedded here for the selected lesson.', 'agentic-coach' )
+									? __( 'The coach will be embedded here for the selected lesson.', 'agentic-coach' )
 									: __( 'Choose a course and lesson in the block settings.', 'agentic-coach' ) )
 						)
 					)
