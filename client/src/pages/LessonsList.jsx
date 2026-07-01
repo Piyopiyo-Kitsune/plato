@@ -40,13 +40,13 @@ function lessonStatusKey(d) {
 // both by the icon's aria-label/title and by the open-lesson button's
 // accessible name). Keeping it here means SR users hear the same wording
 // no matter which path led them to the status info.
-function statusAnnouncement(d) {
-  if (d?.status === 'completed') return 'Completed';
+function statusAnnouncement(d, t) {
+  if (d?.status === 'completed') return t('lessons.completed');
   if (d?.status) {
     const pct = d.progress != null ? d.progress * 10 : null;
-    return pct != null ? `In progress, ${pct}% complete` : 'In progress';
+    return pct != null ? `${t('lessons.inProgress')} · ${pct}%` : t('lessons.inProgress');
   }
-  return 'Not started';
+  return t('lessons.notStarted');
 }
 
 function formatTimeRange(p20, p80) {
@@ -492,7 +492,7 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideC
     });
   }
 
-  const statusText = statusAnnouncement(progress);
+  const statusText = statusAnnouncement(progress, t);
 
   return (
     <Card className="h-full transition-shadow hover:shadow-md group gap-0 p-0">

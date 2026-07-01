@@ -3,10 +3,11 @@ import { getPreferences, savePreferences } from '../../js/storage.js';
 import { resolveLanguageCode } from '../lib/language.js';
 import { CATALOGS as BASE } from '../lib/i18n/catalogs.js';
 import { SCREENS } from '../lib/i18n/catalogs.screens.js';
+import { DIALOGS } from '../lib/i18n/catalogs.dialogs.js';
 
-// Merge the base + screens catalogs per language so both key sets resolve.
+// Merge the base + screens + dialogs catalogs per language so all keys resolve.
 const CATALOGS = Object.fromEntries(
-  Object.keys(BASE).map((code) => [code, { ...BASE[code], ...(SCREENS[code] || {}) }]),
+  Object.keys(BASE).map((code) => [code, { ...BASE[code], ...(SCREENS[code] || {}), ...(DIALOGS[code] || {}) }]),
 );
 
 /**

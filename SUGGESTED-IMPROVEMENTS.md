@@ -146,9 +146,13 @@ needed. The *conversation* adapts immediately; authored lesson content
     Settings (account fields + the full "Your data & privacy" panel, delete + profile-
     feedback dialogs), and the shared ConfirmModal — all translated across the 15
     languages via a second merged catalog (`catalogs.screens.js`).
-  - **Still English (minor, aria/sr-only or rare):** some sr-only status
-    announcements, the ImageConsentDialog prose, and a couple of secondary dialog
-    headings (Exemplar, Additional Context). Same `t()` drop-in when needed.
+  - **Dialogs & remaining prose ✅:** the ImageConsentDialog (full consent copy),
+    the objectives-dialog headings (Exemplar, Additional Context), and the lesson-
+    card status text (Completed / In progress / Not started) are translated across
+    all 15 languages (`catalogs.dialogs.js`, merged third).
+  - **Still English (aria-only, low value):** the composite live-region
+    announcement in LessonsList ("Showing N to M of X lessons, page…") and its
+    filter phrase. Same `t()` pattern if ever needed.
 - **Phase 3 (optional):** offer to auto-translate authored lesson content (name,
   description, exemplar), or let authors provide per-language variants.
 
