@@ -34,6 +34,7 @@ export async function loadLessons() {
           // publish), not in the markdown — carry them forward so the course view
           // can group by module and order by module → lesson order.
           parsed.module = lesson.module ?? null;
+          parsed.moduleDescription = lesson.moduleDescription ?? null;
           parsed.moduleOrder = lesson.moduleOrder ?? null;
           parsed.order = lesson.order ?? null;
           lessons.push(parsed);

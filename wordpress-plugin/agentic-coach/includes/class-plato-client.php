@@ -178,6 +178,7 @@ class Agentic_Coach_Plato_Client {
 			'courseId'      => isset( $args['course_id'] ) ? $args['course_id'] : '',
 			'courseName'    => isset( $args['course_name'] ) ? $args['course_name'] : '',
 			'moduleName'    => isset( $args['module_name'] ) ? $args['module_name'] : null,
+			'moduleDescription' => isset( $args['module_description'] ) ? $args['module_description'] : null,
 			'moduleOrder'   => isset( $args['module_order'] ) ? (int) $args['module_order'] : null,
 			'lessonOrder'   => isset( $args['lesson_order'] ) ? (int) $args['lesson_order'] : null,
 		);

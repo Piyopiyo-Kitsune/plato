@@ -194,7 +194,13 @@ export default function LessonsList() {
     for (const l of filtered) {
       const key = l.module || NO_MODULE;
       if (!groups.has(key)) {
-        groups.set(key, { key, name: l.module || 'Other', order: l.module ? l.moduleOrder : null, lessons: [] });
+        groups.set(key, {
+          key,
+          name: l.module || 'Other',
+          description: l.module ? (l.moduleDescription || null) : null,
+          order: l.module ? l.moduleOrder : null,
+          lessons: [],
+        });
       }
       groups.get(key).lessons.push(l);
     }
@@ -359,11 +365,16 @@ export default function LessonsList() {
             const groupName = group.key === '__none__' ? t('lessons.other') : group.name;
             return (
             <section key={group.key} aria-labelledby={`module-${group.key}`}>
-              <h2 id={`module-${group.key}`} className="text-base font-semibold mb-3">
+              <h2 id={`module-${group.key}`} className="text-base font-semibold mb-1">
                 {groupName}
               </h2>
+              {group.description && (
+                <p className="text-sm text-muted-foreground mb-3 max-w-3xl leading-relaxed whitespace-pre-line">
+                  {group.description}
+                </p>
+              )}
               <ul
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ${group.description ? '' : 'mt-3'}`}
                 role="list"
                 aria-label={`${t('lessons.title')} — ${groupName}`}
               >
@@ -375,6 +386,7 @@ export default function LessonsList() {
                   >
                     <LessonCard
                       lesson={c}
+                      number={i + 1}
                       progress={lessonData[c.lessonId]}
                       timeStats={timeStats[c.lessonId]}
                       onOpen={() => navigate(`/lessons/${c.lessonId}`)}
@@ -457,8 +469,11 @@ export default function LessonsList() {
   );
 }
 
-function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideCourse }) {
+function LessonCard({ lesson, number, progress, timeStats, onOpen, onShowOverview, hideCourse }) {
   const t = useT();
+  // In the module-grouped course view, prefix the lesson's position within its
+  // module (e.g. "1. Professional Identity") so learners see the sequence.
+  const displayName = number ? `${number}. ${lesson.name}` : lesson.name;
   // Stable id per card so the open-lesson button can describe itself with
   // the meta strip — Tab navigation announces course + time as
   // supplementary context (status now lives in the indicator and the
@@ -503,14 +518,14 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideC
         // indicator is aria-hidden, so without this the icon's meaning
         // would be invisible to SR users. We use aria-label instead of
         // wrapping an h3 inside the button (invalid HTML per WCAG 2.4.6).
-        aria-label={`Open lesson ${lesson.name}. ${statusText}.`}
+        aria-label={`Open lesson ${displayName}. ${statusText}.`}
         aria-describedby={parts.length > 0 ? metaId : undefined}
         className="flex-1 text-left px-4 pt-4 pb-2 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
       >
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1 space-y-1.5">
             <span className="text-base font-semibold leading-snug transition-colors group-hover:text-primary block">
-              {lesson.name}
+              {displayName}
             </span>
             {lesson.description && (
               <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">

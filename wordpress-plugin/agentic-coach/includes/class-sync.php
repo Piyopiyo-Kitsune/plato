@@ -126,12 +126,17 @@ class Agentic_Coach_Sync {
 		if ( ! $module_post_id ) {
 			return array(
 				'name'         => null,
+				'description'  => null,
 				'module_order' => null,
 				'lesson_order' => (int) get_post_meta( $post->ID, '_agentic_order', true ),
 			);
 		}
+		// Plain-text description from the module post's content — shown to learners
+		// between the module title and its lessons in the course-detail view.
+		$description = trim( wp_strip_all_tags( strip_shortcodes( (string) get_post_field( 'post_content', $module_post_id ) ) ) );
 		return array(
 			'name'         => get_the_title( $module_post_id ),
+			'description'  => '' !== $description ? $description : null,
 			'module_order' => (int) get_post_meta( $module_post_id, '_agentic_order', true ),
 			'lesson_order' => (int) get_post_meta( $post->ID, '_agentic_order', true ),
 		);
@@ -184,11 +189,12 @@ class Agentic_Coach_Sync {
 				'name'            => $post->post_title,
 				'markdown'        => $this->compose_markdown( $post ),
 				'status'          => 'publish' === $post->post_status ? 'public' : 'draft',
-				'course_id'       => $course_id,
-				'course_name'     => $course_name,
-				'module_name'     => $module['name'],
-				'module_order'    => $module['module_order'],
-				'lesson_order'    => $module['lesson_order'],
+				'course_id'          => $course_id,
+				'course_name'        => $course_name,
+				'module_name'        => $module['name'],
+				'module_description' => $module['description'],
+				'module_order'       => $module['module_order'],
+				'lesson_order'       => $module['lesson_order'],
 			)
 		);
 		if ( is_wp_error( $result ) ) {
