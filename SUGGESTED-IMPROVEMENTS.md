@@ -170,15 +170,24 @@ Extract a small `Lms_Adapter` interface so each is ~50 lines.
 
 ---
 
-## 6. Design-system alignment
+## 6. Design-system alignment ✅ DONE (tokens); type-scale/spacing = follow-up
 
-Adopt the **WordPress Design Library** and **WordPress Design System** (the Figma
-sources) for Plato's learner-facing UI:
-- **Done:** hyperlinks now use **Blueberry `#213FD4`** (a WordPress design token).
-- **Next:** align the type scale + font pairing, spacing, button and card styles,
-  and the focus/active states to the WordPress Design System; map them onto Plato's
-  existing CSS-variable theme (`client/src/index.css`) so they theme cleanly.
-- Keep classroom branding (primary color from settings) layered on top.
+Adopted the **WordPress Design Library** tokens (from the official Figma) as Plato's
+base theme in `client/src/index.css`:
+- **Fonts:** **Inter** for all UI/body text and **EB Garamond** for page titles
+  (`h1`) — the Design Library's display face. Bundled via `@fontsource-variable/*`,
+  replacing Geist.
+- **Colors (light + dark):** base `--primary`/`--ring` → **Blueberry `#3858E9`**
+  (was Plato purple); neutrals → **Charcoal / Light Grey** (`#1A1919` text,
+  `#656A71` muted, `#D9D9D9` borders, `#F6F6F6` surfaces); accents → Blueberry
+  tints; dark mode → Header Dark `#1C2024` / Charcoal 2 surfaces with Blueberry-2
+  accents. Hyperlinks stay **Blueberry Deep `#213FD4`**.
+- Fixed a latent bug: the focus outline used `hsl(var(--ring))`, invalid now that
+  tokens are hex — switched to `var(--ring)`.
+- Classroom branding (primary color from settings) still layers on top via
+  `branding.js`; the WordPress palette is just the default.
+- **Follow-up:** finer type-scale/spacing tuning and button/card shape (radius)
+  against the full Design System — the color/font foundation is in place.
 
 ---
 

@@ -1,13 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+/* WordPress Design Library fonts: Inter for UI/body, EB Garamond for titles. */
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/eb-garamond";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-heading: 'EB Garamond Variable', ui-serif, Georgia, serif;
+    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,77 +51,78 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    /* plato brand purple #470d99 */
-    --primary: oklch(0.336 0.182 285);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.45 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    /* WordPress Design Library tokens (Blueberry + Charcoal / Light Grey). */
+    --background: #ffffff;                 /* White */
+    --foreground: #1a1919;                 /* Charcoal 0 — body text */
+    --card: #ffffff;
+    --card-foreground: #1a1919;
+    --popover: #ffffff;
+    --popover-foreground: #1a1919;
+    --primary: #3858e9;                    /* Blueberry — core brand / primary actions */
+    --primary-foreground: #ffffff;
+    --secondary: #f6f6f6;                  /* Light Grey 2 */
+    --secondary-foreground: #23282d;       /* Charcoal 2 */
+    --muted: #f6f6f6;                      /* Light Grey 2 */
+    --muted-foreground: #656a71;           /* Charcoal 4 — captions / muted */
+    --accent: #eff2ff;                     /* Blueberry 4 — palest tint */
+    --accent-foreground: #1d35b4;          /* Blueberry Dark */
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.905 0 0);
-    --input: oklch(0.905 0 0);
-    --ring: oklch(0.336 0.182 285);
-    --chart-1: oklch(0.336 0.182 285);
-    --chart-2: oklch(0.556 0.15 285);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --border: #d9d9d9;                     /* Light Grey */
+    --input: #d9d9d9;
+    --ring: #3858e9;                       /* Blueberry */
+    --chart-1: #3858e9;                    /* Blueberry */
+    --chart-2: #9fb1ff;                    /* Blueberry 2 */
+    --chart-3: #40464d;                    /* Charcoal 3 */
+    --chart-4: #656a71;                    /* Charcoal 4 */
+    --chart-5: #979aa1;                    /* Charcoal 5 */
     --radius: 0.5rem;
-    --sidebar: oklch(0.336 0.182 285);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.336 0.182 285);
-    --sidebar-accent: oklch(0.4 0.15 285);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar: #23282d;                    /* Charcoal 2 — dark header bar */
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #3858e9;            /* Blueberry */
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #40464d;             /* Charcoal 3 */
+    --sidebar-accent-foreground: #ffffff;
     --sidebar-border: oklch(1 0 0 / 15%);
-    --sidebar-ring: oklch(0.985 0 0);
-    /* WordPress design language — Blueberry, used for hyperlinks. */
+    --sidebar-ring: #3858e9;
+    /* WordPress design language — Blueberry Deep, used for hyperlinks. */
     --link: #213fd4;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.556 0.2 285);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    /* WordPress dark tokens — Header Dark / Charcoal 2 backgrounds. */
+    --background: #1c2024;                 /* Header Dark */
+    --foreground: #ffffff;
+    --card: #23282d;                       /* Charcoal 2 */
+    --card-foreground: #ffffff;
+    --popover: #23282d;
+    --popover-foreground: #ffffff;
+    --primary: #3858e9;                    /* Blueberry */
+    --primary-foreground: #ffffff;
+    --secondary: #40464d;                  /* Charcoal 3 */
+    --secondary-foreground: #ffffff;
+    --muted: #40464d;                      /* Charcoal 3 */
+    --muted-foreground: #979aa1;           /* Charcoal 5 */
+    --accent: #40464d;                     /* Charcoal 3 */
+    --accent-foreground: #ffffff;
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0.2 285);
-    --chart-1: oklch(0.556 0.2 285);
-    --chart-2: oklch(0.7 0.15 285);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0.05 285);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.556 0.2 285);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.3 0.05 285);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --ring: #9fb1ff;                        /* Blueberry 2 */
+    --chart-1: #9fb1ff;                    /* Blueberry 2 */
+    --chart-2: #3858e9;                    /* Blueberry */
+    --chart-3: #979aa1;                    /* Charcoal 5 */
+    --chart-4: #656a71;                    /* Charcoal 4 */
+    --chart-5: #40464d;                    /* Charcoal 3 */
+    --sidebar: #1c2024;                    /* Header Dark */
+    --sidebar-foreground: #ffffff;
+    --sidebar-primary: #9fb1ff;            /* Blueberry 2 */
+    --sidebar-primary-foreground: #1c2024;
+    --sidebar-accent: #40464d;             /* Charcoal 3 */
+    --sidebar-accent-foreground: #ffffff;
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0.2 285);
-    /* Lightened Blueberry for contrast on dark backgrounds. */
-    --link: #8ea2f0;
+    --sidebar-ring: #9fb1ff;
+    /* Blueberry 2 tint for links on dark backgrounds. */
+    --link: #9fb1ff;
 }
 
 @layer base {
@@ -138,10 +141,16 @@
   html {
     @apply font-sans;
   }
+  /* Page titles use EB Garamond (WordPress Design Library display face); all
+     other text — including smaller headings and UI — stays Inter. */
+  h1 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+  }
 
   /* WCAG 2.4.7: Visible focus indicator for keyboard navigation */
   *:focus-visible {
-    outline: 3px solid hsl(var(--ring));
+    outline: 3px solid var(--ring);
     outline-offset: 2px;
   }
 
