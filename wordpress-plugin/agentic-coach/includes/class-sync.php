@@ -45,6 +45,10 @@ class Agentic_Coach_Sync {
 		// (including its module) has been saved.
 		add_action( 'rest_after_insert_' . Agentic_Coach_Content_Types::LESSON, array( $this, 'on_rest_save' ), 10, 1 );
 		add_action( 'rest_after_insert_' . Agentic_Coach_Sensei::LESSON, array( $this, 'on_rest_save' ), 10, 1 );
+		// Editing a module (its description, order, or title) re-syncs the
+		// already-published lessons assigned to it, so those changes reach the
+		// coach without re-saving each lesson by hand.
+		add_action( 'rest_after_insert_' . Agentic_Coach_Content_Types::MODULE, array( $this, 'on_module_save' ), 10, 1 );
 	}
 
 	/**
@@ -233,6 +237,38 @@ class Agentic_Coach_Sync {
 			return; // Not published to the coach yet — respect the author's choice.
 		}
 		$this->push_lesson( $post );
+	}
+
+	/**
+	 * Re-sync every already-published lesson assigned to a module when that module
+	 * is saved — so a module's description/order/title change reaches the coach.
+	 *
+	 * @param WP_Post $module_post Module post.
+	 * @return void
+	 */
+	public function on_module_save( $module_post ) {
+		if ( ! ( $module_post instanceof WP_Post ) || Agentic_Coach_Content_Types::MODULE !== $module_post->post_type ) {
+			return;
+		}
+		$lesson_ids = get_posts(
+			array(
+				'post_type'   => Agentic_Coach_Content_Types::LESSON,
+				'post_status' => array( 'publish', 'draft' ),
+				'numberposts' => 200,
+				'fields'      => 'ids',
+				'meta_key'    => '_agentic_module', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bounded authoring action.
+				'meta_value'  => $module_post->ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- bounded authoring action.
+			)
+		);
+		foreach ( $lesson_ids as $lesson_id ) {
+			if ( ! get_post_meta( $lesson_id, '_plato_lesson_id', true ) ) {
+				continue;
+			}
+			$lesson = get_post( $lesson_id );
+			if ( $lesson ) {
+				$this->push_lesson( $lesson );
+			}
+		}
 	}
 
 	/**
