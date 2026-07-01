@@ -39,6 +39,12 @@ class Agentic_Coach_Sync {
 	 */
 	public function register() {
 		add_action( 'rest_api_init', array( $this, 'routes' ) );
+		// Auto-sync already-published lessons when they're edited (block editor /
+		// REST save), so module/order/content changes reach the coach without a
+		// manual re-publish. `rest_after_insert_*` fires after the lesson's meta
+		// (including its module) has been saved.
+		add_action( 'rest_after_insert_' . Agentic_Coach_Content_Types::LESSON, array( $this, 'on_rest_save' ), 10, 1 );
+		add_action( 'rest_after_insert_' . Agentic_Coach_Sensei::LESSON, array( $this, 'on_rest_save' ), 10, 1 );
 	}
 
 	/**
@@ -144,6 +150,23 @@ class Agentic_Coach_Sync {
 			return new WP_Error( 'agentic_coach_not_lesson', __( 'Not a coaching lesson.', 'agentic-coach' ), array( 'status' => 400 ) );
 		}
 
+		$result = $this->push_lesson( $post );
+		if ( is_wp_error( $result ) ) {
+			return new WP_Error( $result->get_error_code(), $result->get_error_message(), array( 'status' => 502 ) );
+		}
+		return rest_ensure_response( $result );
+	}
+
+	/**
+	 * Push a lesson (its course + module + content) to Plato and store the
+	 * returned mapping on the post. Shared by the manual "Publish Lesson" action
+	 * and the auto-sync-on-save hook.
+	 *
+	 * @param WP_Post $post Lesson post.
+	 * @return array|WP_Error { platoLessonId, platoCourseId, courseLinked } or error.
+	 */
+	private function push_lesson( $post ) {
+		$post_id         = $post->ID;
 		$plato_lesson_id = $this->plato->content_id( 'l', $post_id );
 
 		$course_post_id = $this->course_post_id( $post );
@@ -168,9 +191,8 @@ class Agentic_Coach_Sync {
 				'lesson_order'    => $module['lesson_order'],
 			)
 		);
-
 		if ( is_wp_error( $result ) ) {
-			return new WP_Error( $result->get_error_code(), $result->get_error_message(), array( 'status' => 502 ) );
+			return $result;
 		}
 
 		update_post_meta( $post_id, '_plato_lesson_id', $plato_lesson_id );
@@ -178,13 +200,33 @@ class Agentic_Coach_Sync {
 			update_post_meta( $post_id, '_plato_course_id', $course_id );
 		}
 
-		return rest_ensure_response(
-			array(
-				'platoLessonId' => $plato_lesson_id,
-				'platoCourseId' => $course_id,
-				'courseLinked'  => '' !== $course_id,
-			)
+		return array(
+			'platoLessonId' => $plato_lesson_id,
+			'platoCourseId' => $course_id,
+			'courseLinked'  => '' !== $course_id,
 		);
+	}
+
+	/**
+	 * Keep Plato in sync when an already-published lesson is edited — so changing
+	 * a lesson's module, order, or content in WordPress reaches the coach without
+	 * a manual re-publish. Fires on `rest_after_insert_*` (after the block editor
+	 * has saved the lesson's meta, including its module). Only re-publishes
+	 * lessons already linked to Plato (they carry `_plato_lesson_id`); it never
+	 * auto-publishes a lesson the author hasn't chosen to publish. Best-effort:
+	 * failures are swallowed here and surface on the next manual publish.
+	 *
+	 * @param WP_Post $post Lesson post.
+	 * @return void
+	 */
+	public function on_rest_save( $post ) {
+		if ( ! ( $post instanceof WP_Post ) || ! self::is_publishable( $post->post_type ) ) {
+			return;
+		}
+		if ( ! get_post_meta( $post->ID, '_plato_lesson_id', true ) ) {
+			return; // Not published to the coach yet — respect the author's choice.
+		}
+		$this->push_lesson( $post );
 	}
 
 	/**
