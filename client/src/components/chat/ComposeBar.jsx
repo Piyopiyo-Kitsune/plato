@@ -3,6 +3,7 @@ import { useAutoResize } from '../../hooks/useAutoResize.js';
 import { compressImageDataUrl } from '../../lib/imageCompression.js';
 import { fetchLinkContent } from '../../lib/links.js';
 import { Button } from '@/components/ui/button';
+import { getPreferences, savePreferences } from '../../../js/storage.js';
 import ImageConsentDialog, { hasImageConsent } from './ImageConsentDialog.jsx';
 
 const MAX_IMAGES = 4;
@@ -53,6 +54,18 @@ export default function ComposeBar({
   // pick that arrives before consent is preserved and processed on agree.
   const pendingFilesRef = useRef(null);
   const [consentOpen, setConsentOpen] = useState(false);
+  // When on, plain Enter sends and Shift+Enter inserts a newline. When off
+  // (default), Enter inserts a newline and Cmd/Ctrl+Enter sends. Persisted per
+  // learner in preferences so it sticks across sessions.
+  const [enterToSend, setEnterToSend] = useState(false);
+  useEffect(() => {
+    (async () => setEnterToSend(!!(await getPreferences())?.enterToSend))();
+  }, []);
+  const handleEnterToSendChange = async (checked) => {
+    setEnterToSend(checked);
+    const prefs = (await getPreferences()) || {};
+    await savePreferences({ ...prefs, enterToSend: checked });
+  };
   const linkInputRef = useRef(null);
   const linkButtonRef = useRef(null);
   const handleResize = useAutoResize();
@@ -60,6 +73,7 @@ export default function ComposeBar({
   const statusId = useId();
   const linkInputId = useId();
   const linkGroupId = useId();
+  const enterToSendId = useId();
   const [loadingCount, setLoadingCount] = useState(0);
 
   // Link-attach UI state.
@@ -367,7 +381,13 @@ export default function ComposeBar({
           value={text}
           onChange={(e) => { setText(e.target.value); handleResize(e); }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+            if (e.key !== 'Enter') return;
+            if (enterToSend) {
+              // Enter sends; Shift+Enter (or the modifier combos) makes a newline.
+              if (!e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); send(); }
+            } else if (e.metaKey || e.ctrlKey) {
+              e.preventDefault(); send();
+            }
           }}
           onPaste={handlePaste}
           disabled={disabled}
@@ -458,6 +478,16 @@ export default function ComposeBar({
             </span>
           )}
           <div className="flex-1" />
+          <label htmlFor={enterToSendId} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              id={enterToSendId}
+              type="checkbox"
+              checked={enterToSend}
+              onChange={(e) => handleEnterToSendChange(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-input accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+            Press Enter to send
+          </label>
           <Button
             variant="default"
             size="icon-sm"
