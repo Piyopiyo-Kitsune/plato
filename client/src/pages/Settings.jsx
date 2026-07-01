@@ -13,6 +13,7 @@ import * as orchestrator from '../../js/orchestrator.js';
 import { syncInBackground } from '../lib/syncDebounce.js';
 import { ensureProfileExists, mergeProfile } from '../lib/profileQueue.js';
 import { isEmbedded } from '../lib/embed.js';
+import { useT } from '../contexts/I18nContext.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +28,7 @@ import {
 export default function Settings() {
   const { state, dispatch } = useApp();
   const { user, refreshUser } = useAuth();
+  const t = useT();
   // Embedded in the WordPress Coach: the WordPress account is the identity, so
   // Plato's own account management (email/username/password) is hidden here —
   // only the data & privacy controls remain. See 7a.
@@ -153,21 +155,20 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4">
-      <h2 className="text-xl font-semibold">{embedded ? 'Your data & privacy' : 'User Settings'}</h2>
+      <h2 className="text-xl font-semibold">{embedded ? t('account.dataPrivacy') : t('settings.title')}</h2>
 
       {embedded ? (
         <p className="text-sm text-muted-foreground">
-          You&apos;re signed in through WordPress, so your account is managed there. Below you
-          can view, edit, or delete the data the coach keeps about you.
+          {t('settings.embedIntro')}
         </p>
       ) : (
       <Card>
         <CardHeader>
-          <CardTitle>Account</CardTitle>
+          <CardTitle>{t('settings.account')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Email</span>
+            <span className="text-sm text-muted-foreground">{t('settings.email')}</span>
             <span className="text-sm">{user?.email || ''}</span>
           </div>
 
@@ -175,10 +176,10 @@ export default function Settings() {
 
           <form className="space-y-3" onSubmit={handleSaveUsername}>
             <div className="space-y-1.5">
-              <Label htmlFor="account-username">Username</Label>
+              <Label htmlFor="account-username">{t('settings.username')}</Label>
               <Input id="account-username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
             </div>
-            <Button type="submit">Save</Button>
+            <Button type="submit">{t('settings.save')}</Button>
             {usernameFeedback && <p className="text-sm text-muted-foreground" role="status" aria-live="polite">{usernameFeedback}</p>}
           </form>
 
@@ -186,10 +187,10 @@ export default function Settings() {
 
           <form className="space-y-3" onSubmit={handleSaveName}>
             <div className="space-y-1.5">
-              <Label htmlFor="account-name">Name</Label>
+              <Label htmlFor="account-name">{t('settings.name')}</Label>
               <Input id="account-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            <Button type="submit">Save</Button>
+            <Button type="submit">{t('settings.save')}</Button>
             {nameFeedback && <p className="text-sm text-green-600" role="status" aria-live="polite">{nameFeedback}</p>}
           </form>
 
@@ -197,7 +198,7 @@ export default function Settings() {
 
           <form className="space-y-3" onSubmit={handleChangePassword}>
             <div className="space-y-1.5">
-              <Label htmlFor="new-password">New Password</Label>
+              <Label htmlFor="new-password">{t('settings.newPassword')}</Label>
               <PasswordField
                 id="new-password"
                 autoComplete="new-password"
@@ -207,7 +208,7 @@ export default function Settings() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Label htmlFor="confirm-password">{t('settings.confirmPassword')}</Label>
               <PasswordField
                 id="confirm-password"
                 autoComplete="new-password"
@@ -218,7 +219,7 @@ export default function Settings() {
               />
             </div>
             <Button type="submit" disabled={passwordSubmitting}>
-              {passwordSubmitting ? 'Changing...' : 'Change Password'}
+              {passwordSubmitting ? t('settings.changing') : t('settings.changePassword')}
             </Button>
             {passwordFeedback && <p className="text-sm text-muted-foreground" role="status" aria-live="polite">{passwordFeedback}</p>}
           </form>
@@ -228,21 +229,12 @@ export default function Settings() {
 
       <Card>
         <CardHeader>
-          <CardTitle id="profile-heading">Your data &amp; privacy</CardTitle>
+          <CardTitle id="profile-heading">{t('account.dataPrivacy')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2 text-sm text-muted-foreground leading-relaxed">
-            <p>
-              As you work through activities, the coach keeps a short <strong>learner
-              profile</strong> — things like your experience level, goals, strengths, and
-              what you&apos;re working on. It uses this to personalize its coaching.
-            </p>
-            <p>
-              Your profile is stored with your account and your chat history, and is used
-              <strong> only</strong> to help the coach support you. It is never sold or used for
-              advertising. You&apos;re in control: you can view it, edit it, delete it, or turn
-              off personalization at any time below.
-            </p>
+            <p>{t('settings.privacy1')}</p>
+            <p>{t('settings.privacy2')}</p>
           </div>
 
           <Separator />
@@ -257,9 +249,7 @@ export default function Settings() {
               className="mt-1 h-4 w-4 rounded border-input accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
             <Label htmlFor="profile-opt-out" className="text-sm font-normal leading-relaxed">
-              <span className="font-medium">Turn off personalization.</span> The coach still
-              works, but it won&apos;t build or use a profile of you. Your existing profile stays
-              stored until you delete it below.
+              <span className="font-medium">{t('settings.turnOff')}</span> {t('settings.turnOffDesc')}
             </Label>
           </div>
 
@@ -267,10 +257,10 @@ export default function Settings() {
             <>
               <Separator />
               <div className="space-y-3">
-                <h3 className="text-sm font-medium" id="profile-summary-heading">Your profile</h3>
+                <h3 className="text-sm font-medium" id="profile-summary-heading">{t('settings.yourProfile')}</h3>
                 {editing ? (
                   <div className="space-y-2">
-                    <Label htmlFor="profile-edit" className="sr-only">Edit your profile</Label>
+                    <Label htmlFor="profile-edit" className="sr-only">{t('settings.edit')}</Label>
                     <Textarea
                       id="profile-edit"
                       rows={6}
@@ -278,18 +268,18 @@ export default function Settings() {
                       onChange={(e) => setEditedSummary(e.target.value)}
                     />
                     <div className="flex gap-2">
-                      <Button onClick={saveEditedProfile}>Save</Button>
-                      <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+                      <Button onClick={saveEditedProfile}>{t('settings.save')}</Button>
+                      <Button variant="outline" onClick={() => setEditing(false)}>{t('common.cancel')}</Button>
                     </div>
                   </div>
                 ) : (
                   <>
                     <div className="rounded-md bg-muted p-3 text-sm leading-relaxed" aria-labelledby="profile-summary-heading">
-                      {profileSummary || <em className="text-muted-foreground">No profile yet. Complete an activity to build your profile.</em>}
+                      {profileSummary || <em className="text-muted-foreground">{t('settings.noProfile')}</em>}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" onClick={startEditProfile}>Edit</Button>
-                      <Button variant="outline" onClick={() => setFeedbackOpen(true)}>Add Feedback</Button>
+                      <Button variant="outline" onClick={startEditProfile}>{t('settings.edit')}</Button>
+                      <Button variant="outline" onClick={() => setFeedbackOpen(true)}>{t('settings.addFeedback')}</Button>
                     </div>
                   </>
                 )}
@@ -305,11 +295,10 @@ export default function Settings() {
               className="text-destructive hover:text-destructive"
               onClick={() => setDeleteOpen(true)}
             >
-              Delete my profile data
+              {t('settings.deleteData')}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Permanently removes your stored learner profile. Your lessons and chat history are
-              not affected.
+              {t('settings.deleteHint')}
             </p>
           </div>
 
@@ -330,20 +319,18 @@ export default function Settings() {
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete your profile data?</DialogTitle>
+            <DialogTitle>{t('settings.deleteTitle')}</DialogTitle>
             <DialogDescription>
-              This permanently deletes the learner profile the coach has built about you. The
-              coach will start fresh next time. This can&apos;t be undone. Your lessons and chat
-              history are not affected.
+              {t('settings.deleteDesc')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>{t('common.cancel')}</Button>
             <Button
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={deleteMyProfile}
             >
-              Delete my data
+              {t('settings.deleteConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -353,6 +340,7 @@ export default function Settings() {
 }
 
 function ProfileFeedbackDialog({ open, onOpenChange, onDone }) {
+  const t = useT();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -383,13 +371,13 @@ function ProfileFeedbackDialog({ open, onOpenChange, onDone }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Profile Feedback</DialogTitle>
+          <DialogTitle>{t('settings.feedbackTitle')}</DialogTitle>
           <DialogDescription>
-            Share anything that seems inaccurate or missing -- your device, experience level, learning style, or anything else.
+            {t('settings.feedbackDesc')}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label htmlFor="profile-feedback-input" className="sr-only">Profile feedback</Label>
+          <Label htmlFor="profile-feedback-input" className="sr-only">{t('settings.feedbackTitle')}</Label>
           <Textarea
             id="profile-feedback-input"
             rows={4}
@@ -400,9 +388,9 @@ function ProfileFeedbackDialog({ open, onOpenChange, onDone }) {
           />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Updating...' : 'Submit'}
+            {submitting ? t('settings.updating') : t('settings.submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

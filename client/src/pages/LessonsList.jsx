@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext.jsx';
 import { getLessonKB } from '../../js/storage.js';
 import { authenticatedFetch } from '../../js/auth.js';
+import { useT } from '../contexts/I18nContext.jsx';
 import Check from 'lucide-react/dist/esm/icons/check';
 import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
 import { Card } from '@/components/ui/card';
@@ -59,6 +60,7 @@ function formatTimeRange(p20, p80) {
 export default function LessonsList() {
   const { state } = useApp();
   const navigate = useNavigate();
+  const t = useT();
   const { lessons, loaded } = state;
   const [lessonData, setLessonData] = useState({});
   const [timeStats, setTimeStats] = useState({});
@@ -280,45 +282,45 @@ export default function LessonsList() {
         {lockedCourse ? (
           <div>
             <Link to="/courses" className="text-sm text-muted-foreground hover:text-foreground">
-              &larr; All courses
+              &larr; {t('lessons.allCourses')}
             </Link>
             <h1 className="text-xl font-semibold">{lockedCourseName}</h1>
           </div>
         ) : (
-          <h1 className="text-xl font-semibold">Lessons</h1>
+          <h1 className="text-xl font-semibold">{t('lessons.title')}</h1>
         )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {!lockedCourse && hasCourseFilter && (
             <div className="flex items-center gap-2">
-              <label htmlFor="course-filter" className="text-sm text-muted-foreground">Course</label>
+              <label htmlFor="course-filter" className="text-sm text-muted-foreground">{t('lessons.filterCourse')}</label>
               <select
                 id="course-filter"
                 value={courseFilter}
                 onChange={(e) => setCourseFilter(e.target.value)}
                 className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value={FILTER_ALL}>All courses</option>
+                <option value={FILTER_ALL}>{t('lessons.allCourses')}</option>
                 {courseOptions.named.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
                 {courseOptions.hasUncategorized && (
-                  <option value={FILTER_NONE}>Uncategorized</option>
+                  <option value={FILTER_NONE}>{t('courses.uncategorized')}</option>
                 )}
               </select>
             </div>
           )}
           <div className="flex items-center gap-2">
-            <label htmlFor="status-filter" className="text-sm text-muted-foreground">Status</label>
+            <label htmlFor="status-filter" className="text-sm text-muted-foreground">{t('lessons.filterStatus')}</label>
             <select
               id="status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value={STATUS_ALL}>All statuses</option>
-              <option value={STATUS_NOT_STARTED}>Not started</option>
-              <option value={STATUS_IN_PROGRESS}>In progress</option>
-              <option value={STATUS_COMPLETED}>Completed</option>
+              <option value={STATUS_ALL}>{t('lessons.allStatuses')}</option>
+              <option value={STATUS_NOT_STARTED}>{t('lessons.notStarted')}</option>
+              <option value={STATUS_IN_PROGRESS}>{t('lessons.inProgress')}</option>
+              <option value={STATUS_COMPLETED}>{t('lessons.completed')}</option>
             </select>
           </div>
         </div>
@@ -337,15 +339,15 @@ export default function LessonsList() {
         // region above is the single announcer; it fires when its content
         // transitions from '' (loading) to "Showing N lessons" (loaded).
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          Loading lessons…
+          {t('lessons.loading')}
         </div>
       ) : lessons.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          No lessons yet.
+          {t('lessons.noneYet')}
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          No lessons match this filter.
+          {t('lessons.noMatch')}
         </div>
       ) : moduleGroups && !(moduleGroups.length === 1 && moduleGroups[0].key === '__none__') ? (
         // Real module grouping exists for this course — show a header per
@@ -353,15 +355,17 @@ export default function LessonsList() {
         // group), fall through to the plain flat grid below instead — a lone
         // "Other" heading with nothing to contrast against is just noise.
         <div className="space-y-8">
-          {moduleGroups.map((group) => (
+          {moduleGroups.map((group) => {
+            const groupName = group.key === '__none__' ? t('lessons.other') : group.name;
+            return (
             <section key={group.key} aria-labelledby={`module-${group.key}`}>
               <h2 id={`module-${group.key}`} className="text-base font-semibold mb-3">
-                {group.name}
+                {groupName}
               </h2>
               <ul
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
                 role="list"
-                aria-label={`Lessons in ${group.name}`}
+                aria-label={`${t('lessons.title')} — ${groupName}`}
               >
                 {group.lessons.map((c, i) => (
                   <li
@@ -381,13 +385,14 @@ export default function LessonsList() {
                 ))}
               </ul>
             </section>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <ul
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
           role="list"
-          aria-label="Lessons"
+          aria-label={t('lessons.title')}
         >
           {visibleLessons.map((c, i) => (
             <li
@@ -420,21 +425,21 @@ export default function LessonsList() {
             size="sm"
             disabled={currentPage <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            aria-label="Previous page"
+            aria-label={t('lessons.prev')}
           >
-            &larr; Previous
+            &larr; {t('lessons.prev')}
           </Button>
           <span className="text-sm text-muted-foreground tabular-nums" aria-current="page">
-            Page {currentPage} of {totalPages}
+            {t('lessons.page', { current: currentPage, total: totalPages })}
           </span>
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            aria-label="Next page"
+            aria-label={t('lessons.next')}
           >
-            Next &rarr;
+            {t('lessons.next')} &rarr;
           </Button>
         </nav>
       )}
@@ -453,6 +458,7 @@ export default function LessonsList() {
 }
 
 function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideCourse }) {
+  const t = useT();
   // Stable id per card so the open-lesson button can describe itself with
   // the meta strip — Tab navigation announces course + time as
   // supplementary context (status now lives in the indicator and the
@@ -557,7 +563,7 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideC
           size="sm"
           className="ml-auto h-7 w-7 p-0 text-muted-foreground hover:text-primary shrink-0"
           onClick={onShowOverview}
-          aria-label={`View ${lesson.learningObjectives.length} objectives for ${lesson.name}`}
+          aria-label={`${t('lessons.overviewCount', { count: lesson.learningObjectives.length })} — ${lesson.name}`}
         >
           <HelpCircle className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -635,6 +641,7 @@ function ProgressRing({ pct, size = 22, stroke = 2.5 }) {
 }
 
 function LessonDetailDialog({ lesson, progress, timeStats, open, onOpenChange }) {
+  const t = useT();
   const pct = progress?.status === 'completed' ? 100 : (progress?.progress != null ? progress.progress * 10 : null);
   const progressText = progress?.status === 'completed' ? 'Completed' : (pct != null ? `${pct}% complete` : null);
   const range = timeStats && (timeStats.sampleSize ?? 0) >= 3
@@ -701,7 +708,7 @@ function LessonDetailDialog({ lesson, progress, timeStats, open, onOpenChange })
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-1">Learning objectives</h3>
+            <h3 className="text-sm font-medium mb-1">{t('lessons.objectives')}</h3>
             <ul className="list-disc pl-5 text-sm text-muted-foreground leading-relaxed space-y-1">
               {lesson.learningObjectives.map((obj, i) => (
                 <li key={i}>{obj}</li>

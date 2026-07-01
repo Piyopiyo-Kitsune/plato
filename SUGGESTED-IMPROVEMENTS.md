@@ -141,9 +141,14 @@ needed. The *conversation* adapts immediately; authored lesson content
     `initializeLessonKB` passes `responseLanguage` and `lesson-owner.md` writes
     objectives/learnerPosition/insights in it (authored fields unchanged).
     Verified end-to-end (overview generated in Spanish).
-  - **Remaining (same pattern, drop-in):** LessonsList filters, Settings internals,
-    the objectives/overview dialogs, and misc confirm modals still show English
-    until their keys are added to the catalogs.
+  - **Extended coverage ✅:** LessonsList (headings, Course/Status filters + options,
+    empty/loading states, module "Other", pagination, overview/objectives),
+    Settings (account fields + the full "Your data & privacy" panel, delete + profile-
+    feedback dialogs), and the shared ConfirmModal — all translated across the 15
+    languages via a second merged catalog (`catalogs.screens.js`).
+  - **Still English (minor, aria/sr-only or rare):** some sr-only status
+    announcements, the ImageConsentDialog prose, and a couple of secondary dialog
+    headings (Exemplar, Additional Context). Same `t()` drop-in when needed.
 - **Phase 3 (optional):** offer to auto-translate authored lesson content (name,
   description, exemplar), or let authors provide per-language variants.
 

@@ -1,7 +1,13 @@
 import { createContext, useContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { getPreferences, savePreferences } from '../../js/storage.js';
 import { resolveLanguageCode } from '../lib/language.js';
-import { CATALOGS } from '../lib/i18n/catalogs.js';
+import { CATALOGS as BASE } from '../lib/i18n/catalogs.js';
+import { SCREENS } from '../lib/i18n/catalogs.screens.js';
+
+// Merge the base + screens catalogs per language so both key sets resolve.
+const CATALOGS = Object.fromEntries(
+  Object.keys(BASE).map((code) => [code, { ...BASE[code], ...(SCREENS[code] || {}) }]),
+);
 
 /**
  * App-wide UI language (multilingual Phase 2).

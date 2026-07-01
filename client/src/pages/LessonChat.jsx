@@ -419,7 +419,7 @@ export default function LessonChat() {
                   aria-expanded={showObjectives}
                   aria-controls="lesson-objectives-dialog"
                 >
-                  Lesson Overview ({lesson.learningObjectives.length} Objectives)
+                  {t('lessons.overviewCount', { count: lesson.learningObjectives.length })}
                 </button>
               </div>
               <ProgressBar lessonKB={lessonKB} />
@@ -575,7 +575,7 @@ export default function LessonChat() {
             <p className="text-sm text-muted-foreground leading-relaxed">{lesson.exemplar}</p>
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Learning Objectives</h3>
+            <h3 className="text-sm font-medium">{t('lessons.objectives')}</h3>
             <ul className="list-disc pl-5 text-sm text-muted-foreground leading-relaxed space-y-1">
               {lesson.learningObjectives.map((obj, i) => (
                 <li key={i}>{obj}</li>
