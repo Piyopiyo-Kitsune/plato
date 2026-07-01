@@ -110,6 +110,21 @@ export async function savePreferences(prefs) {
   await putSyncData('preferences', prefs);
 }
 
+// -- Enrollments --------------------------------------------------------------
+// Per-learner list of course ids the learner has explicitly enrolled in. Powers
+// the "My Courses" view on the courses landing page. Stored as a simple array
+// of course ids. (In the WordPress embed this can later be seeded/merged from
+// Sensei enrollment via the bridge — see SUGGESTED-IMPROVEMENTS.)
+
+export async function getEnrollments() {
+  const data = await fetchSyncData('enrollments');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function saveEnrollments(courseIds) {
+  await putSyncData('enrollments', [...new Set(courseIds)]);
+}
+
 // -- Learner profile ----------------------------------------------------------
 
 export async function getLearnerProfile() {

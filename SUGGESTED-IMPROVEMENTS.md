@@ -29,10 +29,24 @@ confuse authors. Proposed behavior:
 
 ---
 
-## 2. Enrolled vs. all courses + enrollment
+## 2. Enrolled vs. all courses + enrollment ✅ DONE (Plato-native); Sensei mapping = follow-up
 
 Learners need to distinguish **courses they're enrolled in** from **all available
 courses**, and be able to enroll.
+
+**Shipped (Plato-native enrollment):** the Courses landing page (`CoursesList.jsx`)
+now has a **welcome header** plus an **All Courses / My Courses** segmented toggle
+with distinct copy per view. Enrollment is a per-learner list of course ids stored
+in sync-data (`enrollments` key; `getEnrollments`/`saveEnrollments` in
+`client/js/storage.js`). Each All-Courses card has an **Enroll / Enrolled** toggle
+button (`aria-pressed`); My Courses shows only the enrolled subset with an empty
+state that links back to All Courses. Uncategorized is never enrollable.
+
+**Follow-up — map to WordPress/Sensei enrollment (the notes below still apply):**
+today enrollment is Plato-local. To make WordPress the source of truth, seed/merge
+`enrollments` from Sensei via the bridge at token-exchange, and delegate the Enroll
+button to a WordPress REST route. Until then, enrolling in the embed does not
+enroll the learner in Sensei.
 
 **With Sensei:** use Sensei's enrollment as the source of truth.
 - Read enrollment via `Sensei_Course_Enrolment::get_instance( $course_id )->is_enrolled( $user_id )` (or `Sensei()->course->get_learner_courses()`).
