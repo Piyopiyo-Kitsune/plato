@@ -156,7 +156,9 @@ export default function AppShell({ children }) {
         </nav>
       </header>
 
-      <main id="main-content" className={`flex-1 overflow-y-auto bg-stone-100 dark:bg-stone-900 ${animClass}`} tabIndex={-1}>
+      {/* scroll-padding keeps a keyboard-focused element clear of the pinned
+          header (top) and fixed compose bar (bottom) — WCAG 2.2 SC 2.4.11. */}
+      <main id="main-content" className={`flex-1 overflow-y-auto scroll-pt-16 scroll-pb-32 bg-stone-100 dark:bg-stone-900 ${animClass}`} tabIndex={-1}>
         {children}
       </main>
 

@@ -110,7 +110,9 @@ export default function EmbedLessonChat() {
           {/* Fixed-height internal scroll container: keeps the coach's
               auto-scroll-to-latest inside the embed so it never scrolls the
               host WordPress page. */}
-          <main id="main-content" className="mx-auto h-full max-w-3xl overflow-y-auto px-4" tabIndex={-1}>
+          {/* scroll-padding keeps a keyboard-focused element clear of the fixed
+              compose bar / pinned header — WCAG 2.2 SC 2.4.11. */}
+          <main id="main-content" className="mx-auto h-full max-w-3xl overflow-y-auto scroll-pt-16 scroll-pb-32 px-4" tabIndex={-1}>
             <LessonChat />
           </main>
         </BrandingProvider>

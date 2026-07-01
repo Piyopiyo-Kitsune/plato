@@ -3,6 +3,7 @@ import { useAutoResize } from '../../hooks/useAutoResize.js';
 import { compressImageDataUrl } from '../../lib/imageCompression.js';
 import { fetchLinkContent } from '../../lib/links.js';
 import { Button } from '@/components/ui/button';
+import ImageConsentDialog, { hasImageConsent } from './ImageConsentDialog.jsx';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Bedrock 5 MB limit
@@ -48,6 +49,10 @@ export default function ComposeBar({
   const setLinks = onLinksChange || setLocalLinks;
   const inputRef = useRef(null);
   const fileRef = useRef(null);
+  // Files awaiting the one-time image-consent gate. Held here so a paste or file
+  // pick that arrives before consent is preserved and processed on agree.
+  const pendingFilesRef = useRef(null);
+  const [consentOpen, setConsentOpen] = useState(false);
   const linkInputRef = useRef(null);
   const linkButtonRef = useRef(null);
   const handleResize = useAutoResize();
@@ -164,11 +169,39 @@ export default function ComposeBar({
     }
   };
 
+  // Consent gate: on a learner's first image, hold the files and show the
+  // one-time consent dialog; process them only after they agree. Once consent
+  // is remembered, images flow straight through.
+  const requestAddImages = (files) => {
+    if (!files.length) return;
+    if (hasImageConsent()) {
+      addImagesFromFiles(files);
+      return;
+    }
+    pendingFilesRef.current = files;
+    setConsentOpen(true);
+  };
+
+  const handleImageConsentAgree = () => {
+    setConsentOpen(false);
+    const pending = pendingFilesRef.current;
+    pendingFilesRef.current = null;
+    if (pending && pending.length) addImagesFromFiles(pending);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const handleImageConsentCancel = () => {
+    setConsentOpen(false);
+    pendingFilesRef.current = null;
+    // Return focus to the message box so keyboard users aren't stranded.
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (fileRef.current) fileRef.current.value = '';
     if (!files.length) return;
-    await addImagesFromFiles(files);
+    requestAddImages(files);
   };
 
   const handlePaste = (e) => {
@@ -184,7 +217,7 @@ export default function ComposeBar({
     }
     if (files.length === 0) return;
     e.preventDefault();
-    addImagesFromFiles(files);
+    requestAddImages(files);
   };
 
   const removeImage = (idx) => {
@@ -248,6 +281,11 @@ export default function ComposeBar({
 
   return (
     <div className="px-4 pb-4 pt-2">
+      <ImageConsentDialog
+        open={consentOpen}
+        onAgree={handleImageConsentAgree}
+        onCancel={handleImageConsentCancel}
+      />
       <div className={`mx-auto max-w-3xl rounded-lg border border-input bg-background ${elevated ? 'shadow-lg' : ''}`}>
         {images.length > 0 && (
           <div className="m-2 flex flex-wrap gap-2">
