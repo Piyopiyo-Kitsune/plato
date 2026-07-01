@@ -266,6 +266,7 @@ class Agentic_Coach_Content_Types {
 		$int_meta( self::LESSON, '_agentic_order' );
 		$string_meta( self::LESSON, '_plato_lesson_id' );
 		$string_meta( self::LESSON, '_plato_course_id' );
+		$text_meta( self::LESSON, '_agentic_excerpt' );
 		$text_meta( self::LESSON, '_agentic_exemplar' );
 		$text_meta( self::LESSON, '_agentic_objectives' );
 		$text_meta( self::LESSON, '_agentic_coach_directive' );

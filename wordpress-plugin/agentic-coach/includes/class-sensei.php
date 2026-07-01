@@ -56,7 +56,7 @@ class Agentic_Coach_Sensei {
 			return current_user_can( 'edit_posts' );
 		};
 
-		foreach ( array( '_agentic_objectives', '_agentic_exemplar', '_agentic_coach_directive' ) as $key ) {
+		foreach ( array( '_agentic_excerpt', '_agentic_objectives', '_agentic_exemplar', '_agentic_coach_directive' ) as $key ) {
 			register_post_meta(
 				self::LESSON,
 				$key,

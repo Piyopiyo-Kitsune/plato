@@ -198,8 +198,14 @@ class Agentic_Coach_Sync {
 	 * @return string
 	 */
 	public function compose_markdown( WP_Post $post ) {
-		$description = trim( wp_strip_all_tags( $post->post_content ) );
-		$description = '' !== $description ? explode( "\n", $description )[0] : '';
+		// The lesson excerpt (author-written, length-capped) is the card summary
+		// and becomes Plato's lesson description. Fall back to the first line of
+		// the lesson body when no excerpt is set.
+		$description = trim( (string) get_post_meta( $post->ID, '_agentic_excerpt', true ) );
+		if ( '' === $description ) {
+			$body        = trim( wp_strip_all_tags( $post->post_content ) );
+			$description = '' !== $body ? explode( "\n", $body )[0] : '';
+		}
 
 		$objectives_raw = (string) get_post_meta( $post->ID, '_agentic_objectives', true );
 		$objectives     = array();

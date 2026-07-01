@@ -128,7 +128,55 @@ sources) for Plato's learner-facing UI:
 
 ---
 
-## 7. Smaller follow-ups
+## 7. Trust, safety & privacy (learner-facing)
+
+Several of these are compliance-relevant because **the coach may be used by minors**.
+A first layer now lives in the coach prompt (`client/prompts/coach.md` → Guardrails:
+reading level, safety/minors, source-of-truth, WordPress brand). The remaining items
+are UI/data features:
+
+### 7a. Single sign-on — don't ask embedded learners for a Plato account
+In the WordPress embed the learner is already authenticated as their WordPress user
+(the bridge maps them to a stable Plato user), so Plato's own login / "User Settings"
+(email, username, password) should be **hidden in the embed**. Plan:
+- Pass an `embed=1` (or reuse the existing embed route context) into `EmbedLessonChat`
+  and hide account/settings/logout UI; the WordPress account is the identity.
+- Optionally sync display name from WordPress on token exchange so the coach greets
+  them by their WordPress name.
+- The standalone Plato app keeps its own accounts (needed when there's no WordPress
+  session).
+
+### 7b. GDPR — learner control over their stored profile
+Plato keeps a per-learner profile + chat history + course progress. Give learners
+explicit control and a clear notice:
+- A **"Your data & privacy"** panel in the coach: view the stored learner profile,
+  **edit** it, **delete** it, and **opt out** of profile/personalization tracking
+  (coach still works, just without the profile).
+- Wire deletion to the existing bridge erasure (`POST /v1/bridge/forget`) and Plato's
+  profile record; opt-out sets a flag the coach context respects.
+- A short, plain-language privacy notice at first use: what's stored, why, how to
+  delete it, that it's processed by Plato.
+
+### 7c. Image-upload consent (first use)
+Before the first image upload, show a consent modal the learner must accept. Draft copy:
+> **Before you share an image**
+> - **What it's for:** images you upload are used only to help the coach review your
+>   lesson work.
+> - **Who can see it:** your coaching session and the people who run this learning
+>   program. It is processed by the connected AI service to give you feedback.
+> - **How long it's kept:** images are retained with your lesson conversation and are
+>   deleted when your data is deleted.
+> - **Please don't** upload anything inappropriate, offensive, or that isn't your own
+>   lesson work.
+> - **Note:** this coach may be used by learners of all ages, including minors.
+> [ ] I understand and agree.  ( Cancel / Continue )
+
+Persist acceptance per learner so it's shown once. Pair with the coach-prompt guardrail
+that already declines inappropriate images.
+
+---
+
+## 8. Smaller follow-ups
 
 - **Granular provider errors:** surface quota/rate/auth errors from the AI provider
   to the learner clearly instead of a generic 500 (map OpenAI/Anthropic status).
