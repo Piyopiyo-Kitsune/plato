@@ -156,9 +156,14 @@ export async function startLesson(lessonId, lesson, onStream, onProgress) {
   // Respect the learner's opt-out: don't feed the profile into the coach.
   const profileSummary = (await isProfileTrackingEnabled()) ? await getLearnerProfileSummary() : '';
 
-  // Lesson Owner generates the KB
+  // Resolve the learner's language once — used for both the generated overview
+  // (KB) and the coach's replies.
+  const prefs = await getPreferences();
+  const language = coachLanguageName(resolveLanguageCode(prefs));
+
+  // Lesson Owner generates the KB (learner-facing text in the chosen language)
   if (onProgress) onProgress('initializing');
-  const lessonKB = await orchestrator.initializeLessonKB(lesson, profileSummary);
+  const lessonKB = await orchestrator.initializeLessonKB(lesson, profileSummary, language);
   lessonKB.lessonId = lessonId;
   lessonKB.name = lesson.name;
   lessonKB.progress = 0;
@@ -204,9 +209,7 @@ export async function startLesson(lessonId, lesson, onStream, onProgress) {
 
   // Coach opens the conversation
   if (onProgress) onProgress('starting');
-  const prefs = await getPreferences();
   const courseProgress = await loadCourseProgressSummary(lesson);
-  const language = coachLanguageName(resolveLanguageCode(prefs));
   const context = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress, language);
   const coachMsg = await orchestrator.converseStream(
     'coach',

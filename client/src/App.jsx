@@ -15,6 +15,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import ScreenReaderAnnounce from './components/ScreenReaderAnnounce.jsx';
 import { BrandingProvider } from './contexts/BrandingContext.jsx';
+import { I18nProvider } from './contexts/I18nContext.jsx';
 
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.jsx'));
 const AdminHome = lazy(() => import('./pages/admin/AdminHome.jsx'));
@@ -90,7 +91,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <I18nProvider>
       <ScreenReaderAnnounce />
       <Routes>
         <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
@@ -155,6 +156,6 @@ export default function App() {
           </RequireAuth>
         } />
       </Routes>
-    </>
+    </I18nProvider>
   );
 }

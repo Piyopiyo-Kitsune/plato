@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext.jsx';
 import { getEnrollments, saveEnrollments, getLessonKB } from '../../js/storage.js';
+import { useT } from '../contexts/I18nContext.jsx';
 import Check from 'lucide-react/dist/esm/icons/check';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ export default function CoursesList() {
   const { state } = useApp();
   const { lessons, loaded } = state;
   const navigate = useNavigate();
+  const t = useT();
 
   const [view, setView] = useState(VIEW_ALL);
   const [enrolled, setEnrolled] = useState([]);
@@ -131,16 +133,14 @@ export default function CoursesList() {
   return (
     <div className="mx-auto max-w-5xl p-4">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">Welcome to your WordPress Coach</h1>
+        <h1 className="text-2xl font-semibold">{t('courses.welcomeTitle')}</h1>
         <p className="mt-2 max-w-3xl text-muted-foreground leading-relaxed">
-          {view === VIEW_ALL
-            ? 'Explore WordPress topics through an engaging chat with your AI coach. It guides you through short, hands-on lessons, answers questions, and adjusts to how you learn. Pick a course below to get started.'
-            : 'These are the courses you’ve enrolled in. Pick up where you left off — or switch to All Courses to find more.'}
+          {view === VIEW_ALL ? t('courses.introAll') : t('courses.introMine')}
         </p>
       </header>
 
       {/* View toggle: All Courses / My Courses */}
-      <div className="mb-4 inline-flex rounded-md border p-0.5" role="group" aria-label="Course view">
+      <div className="mb-4 inline-flex rounded-md border p-0.5" role="group" aria-label={t('courses.viewLabel')}>
         <button
           type="button"
           onClick={() => setView(VIEW_ALL)}
@@ -149,7 +149,7 @@ export default function CoursesList() {
             view === VIEW_ALL ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          All Courses
+          {t('courses.all')}
         </button>
         <button
           type="button"
@@ -159,33 +159,31 @@ export default function CoursesList() {
             view === VIEW_MINE ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          My Courses{enrolled.length > 0 ? ` (${enrolled.length})` : ''}
+          {t('courses.mine')}{enrolled.length > 0 ? ` (${enrolled.length})` : ''}
         </button>
       </div>
 
       <div role="status" aria-live="polite" className="sr-only">
-        {loaded
-          ? `${view === VIEW_MINE ? 'My Courses' : 'All Courses'}: showing ${visibleCourses.length} ${visibleCourses.length === 1 ? 'course' : 'courses'}.`
-          : ''}
+        {loaded ? `${view === VIEW_MINE ? t('courses.mine') : t('courses.all')}` : ''}
       </div>
 
       {!loaded ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          Loading courses…
+          {t('courses.loading')}
         </div>
       ) : isAllEmpty ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          No courses yet.
+          {t('courses.noneYet')}
         </div>
       ) : isMineEmpty ? (
         <div className="rounded-lg border border-dashed py-12 text-center">
-          <p className="text-muted-foreground">You haven&apos;t enrolled in any courses yet.</p>
+          <p className="text-muted-foreground">{t('courses.notEnrolled')}</p>
           <Button variant="outline" className="mt-3" onClick={() => setView(VIEW_ALL)}>
-            Browse all courses
+            {t('courses.browseAll')}
           </Button>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="list" aria-label={view === VIEW_MINE ? 'My courses' : 'All courses'}>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="list" aria-label={view === VIEW_MINE ? t('courses.mine') : t('courses.all')}>
           {visibleCourses.map((c, i) => (
             <li
               key={c.id}
@@ -205,7 +203,7 @@ export default function CoursesList() {
           {showUncategorized && (
             <li className="list-none">
               <CourseCard
-                name="Uncategorized"
+                name={t('courses.uncategorized')}
                 count={uncategorized.count}
                 completed={uncategorized.completed}
                 onOpen={() => navigate(`/courses/${UNCATEGORIZED}`)}
@@ -218,20 +216,18 @@ export default function CoursesList() {
       <Dialog open={!!unenrollTarget} onOpenChange={(open) => { if (!open) setUnenrollTarget(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Leave this course?</DialogTitle>
+            <DialogTitle>{t('courses.leaveTitle')}</DialogTitle>
             <DialogDescription>
-              {unenrollTarget
-                ? `“${unenrollTarget.name}” will be removed from My Courses. Your progress and chat history are kept — you can re-enroll anytime.`
-                : ''}
+              {unenrollTarget ? t('courses.leaveDesc', { name: unenrollTarget.name }) : ''}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUnenrollTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setUnenrollTarget(null)}>{t('common.cancel')}</Button>
             <Button
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmUnenroll}
             >
-              Leave course
+              {t('courses.leaveConfirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -241,20 +237,20 @@ export default function CoursesList() {
 }
 
 function CourseCard({ name, count, completed = 0, enrolled, onOpen, onToggleEnroll }) {
-  const lessonWord = count === 1 ? 'lesson' : 'lessons';
+  const t = useT();
   const allDone = count > 0 && completed === count;
   const metaText = completed === 0
-    ? `${count} ${lessonWord}`
+    ? t(count === 1 ? 'courses.lessonsOne' : 'courses.lessonsOther', { count })
     : (allDone
-      ? `All ${count} ${lessonWord} complete`
-      : `${completed} of ${count} ${lessonWord} complete`);
+      ? t('courses.progressAll', { count })
+      : t('courses.progressSome', { completed, count }));
   const pct = count > 0 ? Math.round((completed / count) * 100) : 0;
   return (
     <Card className="flex h-full flex-col transition-shadow hover:shadow-md group gap-0 p-0">
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`Open course ${name}, ${metaText}`}
+        aria-label={`${name} — ${metaText}`}
         className="flex-1 w-full text-left px-4 py-4 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
       >
         <span className="text-base font-semibold leading-snug transition-colors group-hover:text-primary block">
@@ -274,15 +270,15 @@ function CourseCard({ name, count, completed = 0, enrolled, onOpen, onToggleEnro
             variant={enrolled ? 'secondary' : 'outline'}
             size="sm"
             aria-pressed={enrolled}
-            aria-label={enrolled ? `Leave course ${name}` : `Enroll in course ${name}`}
+            aria-label={enrolled ? `${t('courses.leaveConfirm')}: ${name}` : `${t('courses.enroll')}: ${name}`}
             onClick={onToggleEnroll}
           >
             {enrolled ? (
               <>
-                <Check className="size-4" aria-hidden="true" /> Enrolled
+                <Check className="size-4" aria-hidden="true" /> {t('courses.enrolled')}
               </>
             ) : (
-              'Enroll'
+              t('courses.enroll')
             )}
           </Button>
         </div>

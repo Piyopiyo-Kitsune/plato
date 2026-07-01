@@ -127,10 +127,25 @@ needed. The *conversation* adapts immediately; authored lesson content
     returns it from `/exchange`; `bridgeBoot` saves it as `preferences.wpLocale`;
     `resolveLanguageCode` uses it as priority 2 (explicit → wpLocale → browser →
     English). Verified: `es_ES` round-trips and resolves to Spanish.
-- **Phase 2:** localize the Plato UI chrome (buttons, labels) with an i18n library
-  (e.g. react-i18next) and translation catalogs.
-- **Phase 3 (optional):** offer to auto-translate authored lesson content, or let
-  authors provide per-language variants.
+- **Phase 2 ✅ DONE (core surfaces):** the UI chrome now re-translates instantly
+  when the learner switches language.
+  - Lightweight i18n: `client/src/contexts/I18nContext.jsx` (`I18nProvider`,
+    `useT`, `useLanguage`) + static catalogs `client/src/lib/i18n/catalogs.js`
+    (all 15 switcher languages). Fallback: language → English → raw key.
+  - The header switcher writes through the context, so changing it re-renders the
+    whole tree and persists to `preferences.language`.
+  - Converted: AppShell chrome, CoursesList (welcome, All/My Courses, enroll,
+    progress, empty states, leave dialog), ComposeBar (send/enter/attach), and
+    LessonChat (back/reset/next).
+  - **AI-generated Learning Overview** now also generates in the chosen language:
+    `initializeLessonKB` passes `responseLanguage` and `lesson-owner.md` writes
+    objectives/learnerPosition/insights in it (authored fields unchanged).
+    Verified end-to-end (overview generated in Spanish).
+  - **Remaining (same pattern, drop-in):** LessonsList filters, Settings internals,
+    the objectives/overview dialogs, and misc confirm modals still show English
+    until their keys are added to the catalogs.
+- **Phase 3 (optional):** offer to auto-translate authored lesson content (name,
+  description, exemplar), or let authors provide per-language variants.
 
 ---
 

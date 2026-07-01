@@ -12,6 +12,7 @@ import {
 } from '../../js/storage.js';
 import { invalidateLessonsCache, loadLessons } from '../../js/lessonOwner.js';
 import * as engine from '../lib/lessonEngine.js';
+import { useT } from '../contexts/I18nContext.jsx';
 
 import ChatArea from '../components/chat/ChatArea.jsx';
 import ThinkingSpinner from '../components/chat/ThinkingSpinner.jsx';
@@ -33,6 +34,7 @@ export default function LessonChat() {
   const { state, dispatch } = useApp();
   const { lessons } = state;
   const lesson = lessons.find(c => c.lessonId === lessonGroupId);
+  const t = useT();
   const { impersonatedUser } = useAuth();
   const impersonating = !!impersonatedUser;
 
@@ -294,9 +296,9 @@ export default function LessonChat() {
 
   const handleReset = () => {
     setConfirmModal({
-      title: 'Reset Lesson?',
-      message: "This will delete all progress. You'll start from scratch.",
-      confirmLabel: 'Reset Lesson',
+      title: t('lesson.resetTitle'),
+      message: t('lesson.resetMsg'),
+      confirmLabel: t('lesson.reset'),
       // Clear progress and restart the lesson in place — the learner stays on
       // this lesson rather than being sent to a list. Resetting local state and
       // bumping resetNonce re-runs the start effect, which (finding no saved
@@ -338,7 +340,7 @@ export default function LessonChat() {
   // not the flat all-lessons list. Falls back to the courses home when the
   // lesson has no course.
   const backTarget = lesson.course?.id ? `/courses/${lesson.course.id}` : '/courses';
-  const backLabel = lesson.course?.name ? `Back to ${lesson.course.name}` : 'Back to courses';
+  const backLabel = lesson.course?.name ? t('lesson.backTo', { name: lesson.course.name }) : t('lesson.backToCourses');
   const composePlaceholder = phase === LESSON_PHASES.COMPLETED
     ? 'Share feedback about this lesson...'
     : 'Chat with your coach...';
@@ -498,9 +500,9 @@ export default function LessonChat() {
                   size="lg"
                   onClick={() => navigate(`/lesson/${nextLesson.lessonId}`)}
                   className="min-w-[200px]"
-                  aria-label={`Continue to next lesson: ${nextLesson.name}`}
+                  aria-label={`${t('lesson.continueNext')}: ${nextLesson.name}`}
                 >
-                  Continue to Next Lesson
+                  {t('lesson.continueNext')}
                 </Button>
               ) : (
                 <Button
@@ -509,7 +511,7 @@ export default function LessonChat() {
                   className="min-w-[200px]"
                   aria-label={backLabel}
                 >
-                  {lesson.course?.id ? 'Back to Course' : 'Back to Courses'}
+                  {lesson.course?.id ? t('lesson.backToCourse') : t('lesson.backToCourses')}
                 </Button>
               )}
             </div>

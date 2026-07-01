@@ -4,6 +4,7 @@ import { compressImageDataUrl } from '../../lib/imageCompression.js';
 import { fetchLinkContent } from '../../lib/links.js';
 import { Button } from '@/components/ui/button';
 import { getPreferences, savePreferences } from '../../../js/storage.js';
+import { useT } from '../../contexts/I18nContext.jsx';
 import ImageConsentDialog, { hasImageConsent } from './ImageConsentDialog.jsx';
 
 const MAX_IMAGES = 4;
@@ -38,6 +39,7 @@ export default function ComposeBar({
   links: linksProp,
   onLinksChange,
 }) {
+  const t = useT();
   const [localText, setLocalText] = useState('');
   const [localImages, setLocalImages] = useState([]); // array of { dataUrl, name }
   const [localLinks, setLocalLinks] = useState([]); // array of { url, title, siteName, text }
@@ -444,7 +446,7 @@ export default function ComposeBar({
                 disabled={disabled || images.length >= MAX_IMAGES}
                 aria-label={images.length >= MAX_IMAGES
                   ? `Maximum ${MAX_IMAGES} images attached`
-                  : 'Attach images'}
+                  : t('compose.attachImages')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -486,13 +488,13 @@ export default function ComposeBar({
               onChange={(e) => handleEnterToSendChange(e.target.checked)}
               className="h-3.5 w-3.5 rounded border-input accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             />
-            Press Enter to send
+            {t('compose.enterToSend')}
           </label>
           <Button
             variant="default"
             size="icon-sm"
             className={`transition-opacity ${hasContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            aria-label="Send"
+            aria-label={t('compose.send')}
             aria-describedby={(allowImages || allowLinks) && busy ? statusId : undefined}
             onClick={send}
             disabled={disabled || !hasContent || busy}

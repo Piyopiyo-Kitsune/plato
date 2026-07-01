@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useBranding } from '../contexts/BrandingContext.jsx';
 import { useViewTransition } from '../hooks/useViewTransition.js';
 import { isEmbedded } from '../lib/embed.js';
-import { getPreferences, savePreferences } from '../../js/storage.js';
-import { LANGUAGES, resolveLanguageCode } from '../lib/language.js';
+import { LANGUAGES } from '../lib/language.js';
+import { useT, useLanguage } from '../contexts/I18nContext.jsx';
 import * as DropdownMenuRadix from '@radix-ui/react-dropdown-menu';
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader,
@@ -28,18 +28,12 @@ export default function AppShell({ children }) {
   // only the "Your data & privacy" controls remain reachable. See 7a.
   const embedded = isEmbedded();
 
-  // Coaching language switcher (multilingual Phase 1). Resolves the initial value
-  // from the saved preference, falling back to the browser language, then English.
-  const [lang, setLang] = useState('en');
-  useEffect(() => {
-    (async () => setLang(resolveLanguageCode(await getPreferences())))();
-  }, []);
-  const handleLanguageChange = async (e) => {
-    const code = e.target.value;
-    setLang(code);
-    const prefs = (await getPreferences()) || {};
-    await savePreferences({ ...prefs, language: code });
-  };
+  // Coaching language switcher. Backed by the app-wide I18n context so changing
+  // it re-translates the whole UI instantly and persists to preferences (which
+  // the coach and the AI-generated lesson overview also read).
+  const t = useT();
+  const { lang, setLanguage } = useLanguage();
+  const handleLanguageChange = (e) => setLanguage(e.target.value);
 
   useEffect(() => {
     if (sessionExpired) {
@@ -130,7 +124,7 @@ export default function AppShell({ children }) {
         role="banner"
       >
         <nav className="mx-auto max-w-5xl flex items-center gap-2" aria-label="Main navigation">
-          <a href="/courses" onClick={e => { e.preventDefault(); navigate('/courses'); }} className="shrink-0" aria-label="Go to courses">
+          <a href="/courses" onClick={e => { e.preventDefault(); navigate('/courses'); }} className="shrink-0" aria-label={t('nav.goToCourses')}>
             {classroomLogo ? (
               <img src={classroomLogo} alt="" className="h-8 w-auto" />
             ) : (
@@ -144,7 +138,7 @@ export default function AppShell({ children }) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="opacity-80">
               <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
             </svg>
-            <label htmlFor="coach-language" className="sr-only">Coaching language</label>
+            <label htmlFor="coach-language" className="sr-only">{t('nav.language')}</label>
             <select
               id="coach-language"
               value={lang}
@@ -164,9 +158,9 @@ export default function AppShell({ children }) {
                 <button
                   type="button"
                   className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
-                  aria-label={user?.name ? `Menu for ${user.name}` : 'Menu'}
+                  aria-label={user?.name ? t('account.menuFor', { name: user.name }) : t('account.menu')}
                 >
-                  {user?.name ? `Hi, ${user.name}` : 'Menu'}
+                  {user?.name ? t('account.greeting', { name: user.name }) : t('account.menu')}
                 </button>
               </DropdownMenuRadix.Trigger>
               <DropdownMenuRadix.Portal>
@@ -179,7 +173,7 @@ export default function AppShell({ children }) {
                     className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
                     onSelect={() => navigate('/settings')}
                   >
-                    Your data &amp; privacy
+                    {t('account.dataPrivacy')}
                   </DropdownMenuRadix.Item>
                 </DropdownMenuRadix.Content>
               </DropdownMenuRadix.Portal>
@@ -209,13 +203,13 @@ export default function AppShell({ children }) {
                     className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
                     onSelect={() => navigate('/settings')}
                   >
-                    User Settings
+                    {t('account.userSettings')}
                   </DropdownMenuRadix.Item>
                   <DropdownMenuRadix.Item
                     className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
                     onSelect={() => setSignOutOpen(true)}
                   >
-                    Sign Out
+                    {t('account.signOut')}
                   </DropdownMenuRadix.Item>
                 </DropdownMenuRadix.Content>
               </DropdownMenuRadix.Portal>
@@ -234,18 +228,18 @@ export default function AppShell({ children }) {
       <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign Out?</AlertDialogTitle>
+            <AlertDialogTitle>{t('account.signOutTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              You&apos;ll need to sign in again to access your lessons.
+              {t('account.signOutDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive/10 text-destructive hover:bg-destructive/20"
               onClick={handleSignOut}
             >
-              Sign Out
+              {t('account.signOut')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
