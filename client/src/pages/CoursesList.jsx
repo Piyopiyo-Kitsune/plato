@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext.jsx';
-import { getEnrollments, saveEnrollments } from '../../js/storage.js';
+import { getEnrollments, saveEnrollments, getLessonKB } from '../../js/storage.js';
 import Check from 'lucide-react/dist/esm/icons/check';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,28 +39,59 @@ export default function CoursesList() {
   const [view, setView] = useState(VIEW_ALL);
   const [enrolled, setEnrolled] = useState([]);
   const [unenrollTarget, setUnenrollTarget] = useState(null);
+  // Per-lesson completion (lessonId -> true) for the "N of M complete" progress
+  // on each course card. Sourced from each lesson's KB status, same as the
+  // lessons list; kept fresh via the lesson-completed event.
+  const [completedById, setCompletedById] = useState({});
 
   useEffect(() => {
     (async () => setEnrolled(await getEnrollments()))();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const map = {};
+      for (const l of lessons) {
+        const kb = await getLessonKB(l.lessonId);
+        if (kb?.status === 'completed') map[l.lessonId] = true;
+      }
+      if (!cancelled) setCompletedById(map);
+    })();
+    return () => { cancelled = true; };
+  }, [lessons]);
+
+  // Reflect a completion that happens elsewhere (e.g. finishing a lesson) without
+  // a full reload.
+  useEffect(() => {
+    const onCompleted = (e) => {
+      const id = e.detail?.lessonId;
+      if (id) setCompletedById((prev) => ({ ...prev, [id]: true }));
+    };
+    window.addEventListener('plato:lesson-completed', onCompleted);
+    return () => window.removeEventListener('plato:lesson-completed', onCompleted);
+  }, []);
+
   const { courses, uncategorized } = useMemo(() => {
     const map = new Map();
-    let uncat = 0;
+    let uncat = { count: 0, completed: 0 };
     for (const l of lessons) {
+      const done = !!completedById[l.lessonId];
       if (l.course?.id) {
-        const entry = map.get(l.course.id) || { id: l.course.id, name: l.course.name, count: 0 };
+        const entry = map.get(l.course.id) || { id: l.course.id, name: l.course.name, count: 0, completed: 0 };
         entry.count += 1;
+        if (done) entry.completed += 1;
         map.set(l.course.id, entry);
       } else {
-        uncat += 1;
+        uncat.count += 1;
+        if (done) uncat.completed += 1;
       }
     }
     const sorted = [...map.values()].sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
     );
     return { courses: sorted, uncategorized: uncat };
-  }, [lessons]);
+  }, [lessons, completedById]);
 
   const enrolledSet = useMemo(() => new Set(enrolled), [enrolled]);
 
@@ -92,9 +123,9 @@ export default function CoursesList() {
   const visibleCourses = view === VIEW_MINE
     ? courses.filter((c) => enrolledSet.has(c.id))
     : courses;
-  const showUncategorized = view === VIEW_ALL && uncategorized > 0;
+  const showUncategorized = view === VIEW_ALL && uncategorized.count > 0;
 
-  const isAllEmpty = courses.length === 0 && uncategorized === 0;
+  const isAllEmpty = courses.length === 0 && uncategorized.count === 0;
   const isMineEmpty = view === VIEW_MINE && visibleCourses.length === 0;
 
   return (
@@ -164,6 +195,7 @@ export default function CoursesList() {
               <CourseCard
                 name={c.name}
                 count={c.count}
+                completed={c.completed}
                 enrolled={enrolledSet.has(c.id)}
                 onOpen={() => navigate(`/courses/${c.id}`)}
                 onToggleEnroll={() => toggleEnroll(c.id, c.name)}
@@ -174,7 +206,8 @@ export default function CoursesList() {
             <li className="list-none">
               <CourseCard
                 name="Uncategorized"
-                count={uncategorized}
+                count={uncategorized.count}
+                completed={uncategorized.completed}
                 onOpen={() => navigate(`/courses/${UNCATEGORIZED}`)}
               />
             </li>
@@ -207,20 +240,32 @@ export default function CoursesList() {
   );
 }
 
-function CourseCard({ name, count, enrolled, onOpen, onToggleEnroll }) {
+function CourseCard({ name, count, completed = 0, enrolled, onOpen, onToggleEnroll }) {
   const lessonWord = count === 1 ? 'lesson' : 'lessons';
+  const allDone = count > 0 && completed === count;
+  const metaText = completed === 0
+    ? `${count} ${lessonWord}`
+    : (allDone
+      ? `All ${count} ${lessonWord} complete`
+      : `${completed} of ${count} ${lessonWord} complete`);
+  const pct = count > 0 ? Math.round((completed / count) * 100) : 0;
   return (
     <Card className="flex h-full flex-col transition-shadow hover:shadow-md group gap-0 p-0">
       <button
         type="button"
         onClick={onOpen}
-        aria-label={`Open course ${name}, ${count} ${lessonWord}`}
+        aria-label={`Open course ${name}, ${metaText}`}
         className="flex-1 w-full text-left px-4 py-4 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
       >
         <span className="text-base font-semibold leading-snug transition-colors group-hover:text-primary block">
           {name}
         </span>
-        <p className="text-sm text-muted-foreground mt-1">{count} {lessonWord}</p>
+        <p className={`text-sm mt-1 ${allDone ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{metaText}</p>
+        {completed > 0 && (
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden="true">
+            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        )}
       </button>
       {onToggleEnroll && (
         <div className="border-t px-4 py-2">

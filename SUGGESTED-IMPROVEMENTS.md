@@ -218,7 +218,10 @@ that already declines inappropriate images.
 
 - **Granular provider errors:** surface quota/rate/auth errors from the AI provider
   to the learner clearly instead of a generic 500 (map OpenAI/Anthropic status).
-- **Course cards with progress:** show "N of M lessons completed" on course cards.
+- **Course cards with progress ✅ DONE:** course cards show "N of M lessons
+  complete" (or "All N … complete") with a slim progress bar, derived from each
+  lesson's KB status and kept live via the `plato:lesson-completed` event
+  (`CoursesList`).
 - **Signed publish payloads:** the bridge `/v1/bridge/lesson` authenticates the
   site (HMAC) but doesn't sign the content body; sign it if payload integrity is
   required.
