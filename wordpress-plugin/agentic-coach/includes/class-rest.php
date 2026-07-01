@@ -160,7 +160,10 @@ class Agentic_Coach_REST {
 	 */
 	public function embed_token( WP_REST_Request $request ) {
 		$lesson_id = $request->get_param( 'lessonId' );
-		$result    = $this->plato->mint_embed_code( $lesson_id, get_current_user_id() );
+		// An empty lessonId means the "courses home" embed — mint a code with no
+		// lesson bound and build the full-app home URL.
+		$is_home   = ( '' === $lesson_id || null === $lesson_id || '0' === (string) $lesson_id );
+		$result    = $this->plato->mint_embed_code( $is_home ? null : $lesson_id, get_current_user_id() );
 		if ( is_wp_error( $result ) ) {
 			return new WP_Error(
 				$result->get_error_code(),
@@ -168,11 +171,10 @@ class Agentic_Coach_REST {
 				array( 'status' => 502 )
 			);
 		}
-		return rest_ensure_response(
-			array(
-				'embedUrl' => $this->plato->embed_url( $result['lessonId'] ?? $lesson_id, $result['code'] ),
-			)
-		);
+		$embed_url = $is_home
+			? $this->plato->home_embed_url( $result['code'] )
+			: $this->plato->embed_url( $result['lessonId'] ?? $lesson_id, $result['code'] );
+		return rest_ensure_response( array( 'embedUrl' => $embed_url ) );
 	}
 
 	/**

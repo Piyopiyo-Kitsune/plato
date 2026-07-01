@@ -6,6 +6,7 @@ import LessonsList from './pages/LessonsList.jsx';
 import CoursesList from './pages/CoursesList.jsx';
 import LessonChat from './pages/LessonChat.jsx';
 import EmbedLessonChat from './pages/EmbedLessonChat.jsx';
+import EmbedHome from './pages/EmbedHome.jsx';
 import Settings from './pages/Settings.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -100,6 +101,9 @@ export default function App() {
         {/* WordPress embed — authenticates itself via a one-time bridge code,
             so it sits outside RequireAuth and the classroom AppShell chrome. */}
         <Route path="/embed/lesson/:lessonGroupId" element={<EmbedLessonChat />} />
+        {/* Full-app "courses home" embed — boots the bridge session then hands
+            off to the normal authenticated app (embed-aware AppShell chrome). */}
+        <Route path="/embed/home" element={<EmbedHome />} />
 
         <Route path="/plato/*" element={
           <RequireAuth>

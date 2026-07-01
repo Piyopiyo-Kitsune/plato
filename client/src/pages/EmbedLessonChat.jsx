@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { BrandingProvider } from '../contexts/BrandingContext.jsx';
-import { saveAuthTokens, saveAuthUser } from '../../js/storage.js';
 import { markEmbedded } from '../lib/embed.js';
+import { exchangeBridgeCode } from '../lib/bridgeBoot.js';
 import LessonChat from './LessonChat.jsx';
 
 /**
@@ -46,17 +46,7 @@ export default function EmbedLessonChat() {
     (async () => {
       try {
         if (code) {
-          const res = await fetch('/v1/bridge/exchange', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code }),
-          });
-          if (!res.ok) {
-            throw new Error('This coaching session link has expired. Please reload the page.');
-          }
-          const data = await res.json();
-          await saveAuthTokens({ accessToken: data.accessToken, refreshToken: data.refreshToken });
-          if (data.user) await saveAuthUser(data.user);
+          const data = await exchangeBridgeCode(code);
           // Remove the spent code from the address bar (history, not navigation).
           const target = data.lessonId || lessonGroupId;
           window.history.replaceState({}, '', `/embed/lesson/${target}`);

@@ -83,6 +83,7 @@ class Agentic_Coach_Block {
 	 * @return string
 	 */
 	public function render( $attributes ) {
+		$mode         = isset( $attributes['mode'] ) && 'home' === $attributes['mode'] ? 'home' : 'lesson';
 		$wp_lesson_id = isset( $attributes['lessonId'] ) ? (int) $attributes['lessonId'] : 0;
 		$layout       = isset( $attributes['layout'] ) && 'compact' === $attributes['layout'] ? 'compact' : 'full';
 		$heading      = isset( $attributes['heading'] ) ? (string) $attributes['heading'] : '';
@@ -106,10 +107,12 @@ class Agentic_Coach_Block {
 			<?php
 			if ( ! $this->settings->is_configured() ) {
 				$this->render_notice( __( 'The WordPress Coach is not configured yet.', 'agentic-coach' ), current_user_can( 'manage_options' ) );
-			} elseif ( ! $plato_lesson_id ) {
+			} elseif ( 'lesson' === $mode && ! $plato_lesson_id ) {
 				$this->render_notice( __( 'This lesson has not been published to Plato yet.', 'agentic-coach' ), current_user_can( 'edit_posts' ) );
 			} elseif ( ! is_user_logged_in() ) {
 				$this->render_login_prompt();
+			} elseif ( 'home' === $mode ) {
+				$this->render_mount( '', __( 'WordPress Coach', 'agentic-coach' ) );
 			} else {
 				$this->render_mount( $plato_lesson_id );
 			}
@@ -122,16 +125,19 @@ class Agentic_Coach_Block {
 	/**
 	 * Render the interactive mount point consumed by view.js.
 	 *
-	 * @param string $plato_lesson_id Plato lesson id.
+	 * @param string $plato_lesson_id Plato lesson id (empty for the courses-home embed).
+	 * @param string $frame_title     Accessible iframe title; defaults to a per-lesson label.
 	 * @return void
 	 */
-	private function render_mount( $plato_lesson_id ) {
-		$title = sprintf(
-			/* translators: %s: lesson title or generic label. */
-			__( 'WordPress coaching for %s', 'agentic-coach' ),
-			get_the_title()
-		);
-		echo wp_kses( Agentic_Coach_Embed::mount_html( $this->settings, $plato_lesson_id, $title ), self::mount_kses() );
+	private function render_mount( $plato_lesson_id, $frame_title = '' ) {
+		if ( '' === $frame_title ) {
+			$frame_title = sprintf(
+				/* translators: %s: lesson title or generic label. */
+				__( 'WordPress coaching for %s', 'agentic-coach' ),
+				get_the_title()
+			);
+		}
+		echo wp_kses( Agentic_Coach_Embed::mount_html( $this->settings, $plato_lesson_id, $frame_title ), self::mount_kses() );
 	}
 
 	/**

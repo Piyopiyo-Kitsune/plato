@@ -117,6 +117,17 @@ class Agentic_Coach_Plato_Client {
 	}
 
 	/**
+	 * Build the full iframe embed URL for the "courses home" experience (no
+	 * lesson bound) — drops the learner into the full authenticated coach app.
+	 *
+	 * @param string $code One-time embed code.
+	 * @return string
+	 */
+	public function home_embed_url( $code ) {
+		return $this->settings->plato_url() . '/embed/home?code=' . rawurlencode( $code ) . '&embed=1';
+	}
+
+	/**
 	 * Deterministic Plato content id for a WordPress post, namespaced per site so
 	 * republishing updates the same Plato record and different sites never collide.
 	 *

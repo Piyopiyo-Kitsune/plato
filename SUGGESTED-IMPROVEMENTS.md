@@ -167,9 +167,14 @@ management is now **hidden in the embed**. Shipped:
   greeting uses it.
 - The standalone Plato app is unaffected (not embedded) and keeps its own accounts.
 
-Follow-up: a dedicated full-app embed entry (courses homepage in an iframe) if we
-want the WordPress page to show the coach home rather than a single lesson — the
-client is now ready for it (any AppShell page respects `embed=1`).
+**Full-app "courses home" embed ✅ DONE.** The WordPress Coach block now has a
+**Show: A single lesson / Courses home** option. In home mode it mints a bridge code
+with no lesson and embeds `/embed/home?code=…&embed=1`; the new `EmbedHome` page
+boots the session and hands off to the normal authenticated app at `/courses`
+with the embed-aware AppShell (WordPress identity, no sign-out). The one-time
+bridge-code exchange is now shared by both embeds (`client/src/lib/bridgeBoot.js`),
+and the bridge already tolerated `lessonId: null`. In-iframe reload lands on
+`/courses` and re-hydrates from persisted tokens (no fresh code needed).
 
 ### 7b. GDPR — learner control over their stored profile ✅ DONE
 Plato keeps a per-learner profile + chat history + course progress. Learners now have

@@ -6,13 +6,14 @@
 	"title": "WordPress Coach",
 	"category": "embed",
 	"icon": "welcome-learn-more",
-	"description": "Embed a Plato-powered agentic coach into a lesson.",
+	"description": "Embed a Plato-powered agentic coach — a single lesson or the full courses home.",
 	"textdomain": "agentic-coach",
 	"supports": {
 		"html": false,
 		"align": [ "wide", "full" ]
 	},
 	"attributes": {
+		"mode": { "type": "string", "default": "lesson" },
 		"courseId": { "type": "number", "default": 0 },
 		"moduleId": { "type": "number", "default": 0 },
 		"lessonId": { "type": "number", "default": 0 },

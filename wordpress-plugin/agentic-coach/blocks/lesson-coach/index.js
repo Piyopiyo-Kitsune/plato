@@ -60,10 +60,11 @@
 					.catch( function () { setLessons( [] ); } );
 			}, [ attributes.courseId ] );
 
+			var isHome = attributes.mode === 'home';
 			var selectedLesson = ( lessons || [] ).filter( function ( l ) {
 				return l.id === attributes.lessonId;
 			} )[ 0 ];
-			var notPublished = selectedLesson && ! selectedLesson.platoLesson;
+			var notPublished = ! isHome && selectedLesson && ! selectedLesson.platoLesson;
 
 			return el(
 				'div',
@@ -75,6 +76,17 @@
 						PanelBody,
 						{ title: __( 'Coach source', 'agentic-coach' ), initialOpen: true },
 						el( SelectControl, {
+							label: __( 'Show', 'agentic-coach' ),
+							value: attributes.mode,
+							options: [
+								{ label: __( 'A single lesson', 'agentic-coach' ), value: 'lesson' },
+								{ label: __( 'Courses home (browse all courses)', 'agentic-coach' ), value: 'home' },
+							],
+							onChange: function ( v ) {
+								setAttributes( { mode: 'home' === v ? 'home' : 'lesson' } );
+							},
+						} ),
+						isHome ? null : el( SelectControl, {
 							label: __( 'Course', 'agentic-coach' ),
 							value: attributes.courseId,
 							options: toOptions( courses, 'title', __( 'Select a course…', 'agentic-coach' ) ),
@@ -82,7 +94,7 @@
 								setAttributes( { courseId: parseInt( v, 10 ) || 0, lessonId: 0 } );
 							},
 						} ),
-						el( SelectControl, {
+						isHome ? null : el( SelectControl, {
 							label: __( 'Lesson', 'agentic-coach' ),
 							value: attributes.lessonId,
 							options: toOptions( lessons, 'title', __( 'Select a lesson…', 'agentic-coach' ) ),
@@ -90,6 +102,9 @@
 								setAttributes( { lessonId: parseInt( v, 10 ) || 0 } );
 							},
 						} ),
+						isHome
+							? el( Notice, { status: 'info', isDismissible: false }, __( 'Learners see the coach home with all their courses. No lesson to select.', 'agentic-coach' ) )
+							: null,
 						notPublished
 							? el( Notice, { status: 'warning', isDismissible: false }, __( 'This lesson is not published to Plato yet.', 'agentic-coach' ) )
 							: null
@@ -127,9 +142,11 @@
 						el(
 							'p',
 							{},
-							attributes.lessonId
-								? __( 'A Plato coach will be embedded here for the selected lesson.', 'agentic-coach' )
-								: __( 'Choose a course and lesson in the block settings.', 'agentic-coach' )
+							isHome
+								? __( 'The coach home (all courses) will be embedded here.', 'agentic-coach' )
+								: ( attributes.lessonId
+									? __( 'A Plato coach will be embedded here for the selected lesson.', 'agentic-coach' )
+									: __( 'Choose a course and lesson in the block settings.', 'agentic-coach' ) )
 						)
 					)
 				)
