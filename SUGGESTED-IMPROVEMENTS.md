@@ -108,9 +108,20 @@ needed. The *conversation* adapts immediately; authored lesson content
 (objectives/exemplar) stays as written.
 
 **Phasing:**
-- **Phase 1 (high value, low cost):** language directive in the coach context +
-  switcher + locale/browser detection. The coaching *conversation* becomes
-  multilingual.
+- **Phase 1 ✅ DONE:** language directive in the coach context + a visible switcher
+  + browser/default detection. The coaching *conversation* is now multilingual.
+  - `client/src/lib/language.js`: curated language list, `resolveLanguageCode`
+    (explicit `preferences.language` → `navigator.languages` → English) and
+    `coachLanguageName`.
+  - `buildContext` sets `context.responseLanguage`; `coach.md` Guardrails tell the
+    coach to reply in it and to **mirror** the learner if they write in another
+    language (keeping product/code names untranslated).
+  - Always-visible language switcher in the `AppShell` header (works standalone
+    and embedded), persisting to `preferences.language`.
+  - Verified end-to-end with a live LLM turn (coach opened in Spanish, then French).
+  - **Follow-up:** forward the WordPress account locale (`get_user_locale()`) through
+    the bridge as the priority-2 signal (between explicit choice and browser), so
+    embedded learners get their WP language by default without picking it.
 - **Phase 2:** localize the Plato UI chrome (buttons, labels) with an i18n library
   (e.g. react-i18next) and translation catalogs.
 - **Phase 3 (optional):** offer to auto-translate authored lesson content, or let

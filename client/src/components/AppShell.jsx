@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useBranding } from '../contexts/BrandingContext.jsx';
 import { useViewTransition } from '../hooks/useViewTransition.js';
 import { isEmbedded } from '../lib/embed.js';
+import { getPreferences, savePreferences } from '../../js/storage.js';
+import { LANGUAGES, resolveLanguageCode } from '../lib/language.js';
 import * as DropdownMenuRadix from '@radix-ui/react-dropdown-menu';
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader,
@@ -25,6 +27,19 @@ export default function AppShell({ children }) {
   // Plato's own account management (email/username/password/sign-out) is hidden;
   // only the "Your data & privacy" controls remain reachable. See 7a.
   const embedded = isEmbedded();
+
+  // Coaching language switcher (multilingual Phase 1). Resolves the initial value
+  // from the saved preference, falling back to the browser language, then English.
+  const [lang, setLang] = useState('en');
+  useEffect(() => {
+    (async () => setLang(resolveLanguageCode(await getPreferences())))();
+  }, []);
+  const handleLanguageChange = async (e) => {
+    const code = e.target.value;
+    setLang(code);
+    const prefs = (await getPreferences()) || {};
+    await savePreferences({ ...prefs, language: code });
+  };
 
   useEffect(() => {
     if (sessionExpired) {
@@ -123,6 +138,24 @@ export default function AppShell({ children }) {
             )}
           </a>
           <div className="flex-1" />
+          {/* Coaching language switcher — always visible so learners can
+              override the detected language at any time (multilingual Phase 1). */}
+          <div className="flex items-center gap-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="opacity-80">
+              <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            <label htmlFor="coach-language" className="sr-only">Coaching language</label>
+            <select
+              id="coach-language"
+              value={lang}
+              onChange={handleLanguageChange}
+              className="bg-transparent text-inherit text-sm rounded-md border border-white/30 px-2 py-1 outline-none cursor-pointer hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="text-foreground bg-background">{l.label}</option>
+              ))}
+            </select>
+          </div>
           {embedded ? (
             /* Embedded: identity is the WordPress account. A "Hi, {name}" menu
                offers only the data & privacy controls — no email, no sign-out. */
