@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useBranding } from '../contexts/BrandingContext.jsx';
 import { useViewTransition } from '../hooks/useViewTransition.js';
+import { isEmbedded } from '../lib/embed.js';
 import * as DropdownMenuRadix from '@radix-ui/react-dropdown-menu';
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader,
@@ -20,6 +21,10 @@ export default function AppShell({ children }) {
   const [viewAsOpen, setViewAsOpen] = useState(false);
   const isAdmin = user?.role === 'admin';
   const impersonating = !!impersonatedUser;
+  // In the WordPress embed the learner's identity is their WordPress account, so
+  // Plato's own account management (email/username/password/sign-out) is hidden;
+  // only the "Your data & privacy" controls remain reachable. See 7a.
+  const embedded = isEmbedded();
 
   useEffect(() => {
     if (sessionExpired) {
@@ -118,41 +123,58 @@ export default function AppShell({ children }) {
             )}
           </a>
           <div className="flex-1" />
-          <DropdownMenuRadix.Root>
-            <DropdownMenuRadix.Trigger asChild>
+          {embedded ? (
+            /* Embedded: identity is the WordPress account. Greet by name and
+               offer only the data & privacy controls — no email, no sign-out. */
+            <div className="flex items-center gap-2">
+              {user?.name ? (
+                <span className="text-sm opacity-90">Hi, {user.name}</span>
+              ) : null}
               <button
                 type="button"
-                className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
-                aria-label={`Account: ${user?.username || user?.email || 'signed in'}`}
+                onClick={() => navigate('/settings')}
+                className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
               >
-                {user?.name || user?.username || user?.email || 'Account'}
+                Your data &amp; privacy
               </button>
-            </DropdownMenuRadix.Trigger>
-            <DropdownMenuRadix.Portal>
-              <DropdownMenuRadix.Content
-                align="end"
-                sideOffset={4}
-                className="z-50 min-w-[180px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
-              >
-                <DropdownMenuRadix.Label className="px-2 py-1.5 text-xs text-muted-foreground">
-                  {user?.email || ''}
-                </DropdownMenuRadix.Label>
-                <DropdownMenuRadix.Separator className="my-1 h-px bg-border" />
-                <DropdownMenuRadix.Item
-                  className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
-                  onSelect={() => navigate('/settings')}
+            </div>
+          ) : (
+            <DropdownMenuRadix.Root>
+              <DropdownMenuRadix.Trigger asChild>
+                <button
+                  type="button"
+                  className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
+                  aria-label={`Account: ${user?.username || user?.email || 'signed in'}`}
                 >
-                  User Settings
-                </DropdownMenuRadix.Item>
-                <DropdownMenuRadix.Item
-                  className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
-                  onSelect={() => setSignOutOpen(true)}
+                  {user?.name || user?.username || user?.email || 'Account'}
+                </button>
+              </DropdownMenuRadix.Trigger>
+              <DropdownMenuRadix.Portal>
+                <DropdownMenuRadix.Content
+                  align="end"
+                  sideOffset={4}
+                  className="z-50 min-w-[180px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
                 >
-                  Sign Out
-                </DropdownMenuRadix.Item>
-              </DropdownMenuRadix.Content>
-            </DropdownMenuRadix.Portal>
-          </DropdownMenuRadix.Root>
+                  <DropdownMenuRadix.Label className="px-2 py-1.5 text-xs text-muted-foreground">
+                    {user?.email || ''}
+                  </DropdownMenuRadix.Label>
+                  <DropdownMenuRadix.Separator className="my-1 h-px bg-border" />
+                  <DropdownMenuRadix.Item
+                    className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
+                    onSelect={() => navigate('/settings')}
+                  >
+                    User Settings
+                  </DropdownMenuRadix.Item>
+                  <DropdownMenuRadix.Item
+                    className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
+                    onSelect={() => setSignOutOpen(true)}
+                  >
+                    Sign Out
+                  </DropdownMenuRadix.Item>
+                </DropdownMenuRadix.Content>
+              </DropdownMenuRadix.Portal>
+            </DropdownMenuRadix.Root>
+          )}
         </nav>
       </header>
 

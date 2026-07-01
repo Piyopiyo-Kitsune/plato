@@ -111,7 +111,9 @@ class Agentic_Coach_Plato_Client {
 	 * @return string
 	 */
 	public function embed_url( $lesson_id, $code ) {
-		return $this->settings->plato_url() . '/embed/lesson/' . rawurlencode( $lesson_id ) . '?code=' . rawurlencode( $code );
+		// embed=1 latches Plato's embed mode: the learner's identity is their
+		// WordPress account, so Plato hides its own account/sign-out chrome.
+		return $this->settings->plato_url() . '/embed/lesson/' . rawurlencode( $lesson_id ) . '?code=' . rawurlencode( $code ) . '&embed=1';
 	}
 
 	/**

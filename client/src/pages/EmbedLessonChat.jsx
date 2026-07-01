@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { BrandingProvider } from '../contexts/BrandingContext.jsx';
 import { saveAuthTokens, saveAuthUser } from '../../js/storage.js';
+import { markEmbedded } from '../lib/embed.js';
 import LessonChat from './LessonChat.jsx';
 
 /**
@@ -32,6 +33,12 @@ export default function EmbedLessonChat() {
   const containerRef = useRef(null);
 
   useEffect(() => {
+    // This client is running inside the WordPress Coach iframe — latch embed
+    // mode so account/settings chrome stays hidden across any in-app navigation
+    // (SUGGESTED-IMPROVEMENTS 7a). Runs before the StrictMode guard so it's set
+    // even on the discarded first invoke.
+    markEmbedded();
+
     // Guard against StrictMode's double-invoke — the bridge code is single-use.
     if (ranRef.current) return;
     ranRef.current = true;

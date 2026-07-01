@@ -149,16 +149,27 @@ A first layer now lives in the coach prompt (`client/prompts/coach.md` → Guard
 reading level, safety/minors, source-of-truth, WordPress brand). The remaining items
 are UI/data features:
 
-### 7a. Single sign-on — don't ask embedded learners for a Plato account
+### 7a. Single sign-on — don't ask embedded learners for a Plato account ✅ DONE
 In the WordPress embed the learner is already authenticated as their WordPress user
-(the bridge maps them to a stable Plato user), so Plato's own login / "User Settings"
-(email, username, password) should be **hidden in the embed**. Plan:
-- Pass an `embed=1` (or reuse the existing embed route context) into `EmbedLessonChat`
-  and hide account/settings/logout UI; the WordPress account is the identity.
-- Optionally sync display name from WordPress on token exchange so the coach greets
-  them by their WordPress name.
-- The standalone Plato app keeps its own accounts (needed when there's no WordPress
-  session).
+(the bridge maps them to a stable Plato user), so Plato's own login / account
+management is now **hidden in the embed**. Shipped:
+- Embed-awareness helper `client/src/lib/embed.js` (`isEmbedded()` / `markEmbedded()`).
+  `?embed=1` latches to sessionStorage so it survives client-side navigation;
+  `EmbedLessonChat` also latches it on mount, and the WordPress `embed_url()` now
+  appends `&embed=1`.
+- `AppShell`: in embed mode the account dropdown (email + **User Settings** +
+  **Sign Out**) is replaced by a "Hi, {WordPress name}" greeting and a single
+  **"Your data & privacy"** link. The header still links to the courses home.
+- `Settings`: in embed mode the **Account** card (email/username/password) is hidden
+  and replaced by a "signed in through WordPress" note; the **Your data & privacy**
+  panel (GDPR view/edit/delete/opt-out) stays reachable — we don't hide data rights.
+- The display name already flows from WordPress via the bridge (`user.name`), so the
+  greeting uses it.
+- The standalone Plato app is unaffected (not embedded) and keeps its own accounts.
+
+Follow-up: a dedicated full-app embed entry (courses homepage in an iframe) if we
+want the WordPress page to show the coach home rather than a single lesson — the
+client is now ready for it (any AppShell page respects `embed=1`).
 
 ### 7b. GDPR — learner control over their stored profile ✅ DONE
 Plato keeps a per-learner profile + chat history + course progress. Learners now have

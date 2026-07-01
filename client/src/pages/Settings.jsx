@@ -12,6 +12,7 @@ import { updateProfile } from '../../js/auth.js';
 import * as orchestrator from '../../js/orchestrator.js';
 import { syncInBackground } from '../lib/syncDebounce.js';
 import { ensureProfileExists, mergeProfile } from '../lib/profileQueue.js';
+import { isEmbedded } from '../lib/embed.js';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,10 @@ import {
 export default function Settings() {
   const { state, dispatch } = useApp();
   const { user, refreshUser } = useAuth();
+  // Embedded in the WordPress Coach: the WordPress account is the identity, so
+  // Plato's own account management (email/username/password) is hidden here —
+  // only the data & privacy controls remain. See 7a.
+  const embedded = isEmbedded();
   const [name, setName] = useState(user?.name || state.preferences?.name || '');
   const [username, setUsername] = useState(user?.username || '');
   const [profileSummary, setProfileSummary] = useState('');
@@ -148,8 +153,14 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-4">
-      <h2 className="text-xl font-semibold">User Settings</h2>
+      <h2 className="text-xl font-semibold">{embedded ? 'Your data & privacy' : 'User Settings'}</h2>
 
+      {embedded ? (
+        <p className="text-sm text-muted-foreground">
+          You&apos;re signed in through WordPress, so your account is managed there. Below you
+          can view, edit, or delete the data the coach keeps about you.
+        </p>
+      ) : (
       <Card>
         <CardHeader>
           <CardTitle>Account</CardTitle>
@@ -213,6 +224,7 @@ export default function Settings() {
           </form>
         </CardContent>
       </Card>
+      )}
 
       <Card>
         <CardHeader>
