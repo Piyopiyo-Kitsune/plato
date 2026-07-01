@@ -4,12 +4,15 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-// Load .env file if present
-const envPath = new URL('.env', import.meta.url).pathname;
+// Load .env file if present. Use fileURLToPath (not URL.pathname) so paths that
+// contain spaces — e.g. a checkout under "…/Learn Website - Activity Kit…" — are
+// decoded correctly rather than left percent-encoded.
+const envPath = fileURLToPath(new URL('.env', import.meta.url));
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, 'utf-8').split('\n')) {
     const match = line.match(/^\s*([^#=]+?)\s*=\s*(.*?)\s*$/);
@@ -33,6 +36,7 @@ const { default: admin } = await import('./src/routes/admin.js');
 const { default: sync } = await import('./src/routes/sync.js');
 const { default: ai } = await import('./src/routes/ai.js');
 const { default: content } = await import('./src/routes/content.js');
+const { default: bridge } = await import('./src/routes/bridge.js');
 const { default: app } = await import('./src/routes/app.js');
 const { default: db } = await import('./src/lib/db.js');
 const { generateUserId } = await import('./src/lib/crypto.js');
@@ -86,6 +90,7 @@ server.route('/', admin);
 server.route('/', sync);
 server.route('/', ai);
 server.route('/', content);
+server.route('/', bridge);
 // `app` (SPA fallback `app.get('*')`) is mounted LAST — see plugin catch-all below.
 
 // Plugin registry: discover and activate plugins. Same catch-all pattern as

@@ -1,0 +1,28 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "agentic-coach/lesson-coach",
+	"version": "0.1.0",
+	"title": "WordPress Coach",
+	"category": "embed",
+	"icon": "format-chat",
+	"description": "Embed a Plato-powered agentic coach — a single lesson or the full courses home.",
+	"textdomain": "agentic-coach",
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ]
+	},
+	"attributes": {
+		"mode": { "type": "string", "default": "lesson" },
+		"courseId": { "type": "number", "default": 0 },
+		"moduleId": { "type": "number", "default": 0 },
+		"lessonId": { "type": "number", "default": 0 },
+		"layout": { "type": "string", "default": "full" },
+		"heading": { "type": "string", "default": "" },
+		"intro": { "type": "string", "default": "" }
+	},
+	"editorScript": "agentic-coach-lesson-coach-editor",
+	"viewScript": "agentic-coach-lesson-coach-view",
+	"style": "agentic-coach-lesson-coach-style",
+	"editorStyle": "agentic-coach-lesson-coach-editor-style"
+}

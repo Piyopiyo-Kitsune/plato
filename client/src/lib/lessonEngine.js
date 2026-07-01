@@ -17,9 +17,10 @@ import * as orchestrator from '../../js/orchestrator.js';
 import { authenticatedFetch } from '../../js/auth.js';
 import { compressImageDataUrl } from './imageCompression.js';
 import { syncInBackground } from './syncDebounce.js';
-import { ensureProfileExists, updateProfileOnCompletionInBackground, updateProfileFromObservation } from './profileQueue.js';
+import { ensureProfileExists, updateProfileOnCompletionInBackground, updateProfileFromObservation, isProfileTrackingEnabled } from './profileQueue.js';
 import { updateCourseProgressOnCompletionInBackground } from './courseProgressQueue.js';
 import { LESSON_PHASES, MSG_TYPES, MAX_EXCHANGES } from './constants.js';
+import { resolveLanguageCode, coachLanguageName } from './language.js';
 
 function ts() { return Date.now(); }
 
@@ -152,11 +153,17 @@ export function cleanStream(onStream) {
 export async function startLesson(lessonId, lesson, onStream, onProgress) {
   assertNotImpersonating('start a lesson');
   await ensureProfileExists();
-  const profileSummary = await getLearnerProfileSummary();
+  // Respect the learner's opt-out: don't feed the profile into the coach.
+  const profileSummary = (await isProfileTrackingEnabled()) ? await getLearnerProfileSummary() : '';
 
-  // Lesson Owner generates the KB
+  // Resolve the learner's language once — used for both the generated overview
+  // (KB) and the coach's replies.
+  const prefs = await getPreferences();
+  const language = coachLanguageName(resolveLanguageCode(prefs));
+
+  // Lesson Owner generates the KB (learner-facing text in the chosen language)
   if (onProgress) onProgress('initializing');
-  const lessonKB = await orchestrator.initializeLessonKB(lesson, profileSummary);
+  const lessonKB = await orchestrator.initializeLessonKB(lesson, profileSummary, language);
   lessonKB.lessonId = lessonId;
   lessonKB.name = lesson.name;
   lessonKB.progress = 0;
@@ -202,9 +209,8 @@ export async function startLesson(lessonId, lesson, onStream, onProgress) {
 
   // Coach opens the conversation
   if (onProgress) onProgress('starting');
-  const prefs = await getPreferences();
   const courseProgress = await loadCourseProgressSummary(lesson);
-  const context = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress);
+  const context = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress, language);
   const coachMsg = await orchestrator.converseStream(
     'coach',
     [{ role: 'user', content: context }, { role: 'assistant', content: 'Ready.' }, { role: 'user', content: 'Start the lesson.' }],
@@ -276,7 +282,8 @@ export function buildUserParts(text, imageDataUrls = [], links = []) {
 export async function sendMessage(lessonId, lesson, text, imageDataUrl, links, onStream) {
   assertNotImpersonating('send a message');
   let lessonKB = await getLessonKB(lessonId);
-  const profileSummary = await getLearnerProfileSummary();
+  // Respect the learner's opt-out: don't feed the profile into the coach.
+  const profileSummary = (await isProfileTrackingEnabled()) ? await getLearnerProfileSummary() : '';
 
   const imageDataUrls = normalizeImageDataUrls(imageDataUrl);
   const linkList = Array.isArray(links) ? links.filter((l) => l && l.url) : [];
@@ -306,7 +313,8 @@ export async function sendMessage(lessonId, lesson, text, imageDataUrl, links, o
   // Always include context as first message so coach has lesson + profile info
   const prefs = await getPreferences();
   const courseProgress = await loadCourseProgressSummary(lesson);
-  const contextMsg = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress);
+  const language = coachLanguageName(resolveLanguageCode(prefs));
+  const contextMsg = buildContext(lesson, lessonKB, profileSummary, prefs.name, courseProgress, language);
   const messages = [{ role: 'user', content: contextMsg }, { role: 'assistant', content: 'Ready.' }, ...tail];
   // Collapse to a plain string only when the turn is a single text block.
   messages.push({ role: 'user', content: userParts.length === 1 && userParts[0].type === 'text' ? userParts[0].text : userParts });
@@ -529,11 +537,15 @@ async function loadCourseProgressSummary(lesson) {
   }
 }
 
-export function buildContext(lesson, lessonKB, profileSummary, learnerName, courseProgress) {
+export function buildContext(lesson, lessonKB, profileSummary, learnerName, courseProgress, responseLanguage) {
   const completed = lessonKB?.activitiesCompleted || 0;
   const lessonStatus = lessonKB?.status === 'completed' ? 'completed' : 'active';
   const context = {
     learnerName: learnerName || '',
+    // The language the coach should reply in (an English language name, e.g.
+    // "Spanish"). The coach mirrors the learner if they write in another
+    // language — see coach.md guardrails. Authored lesson content is unchanged.
+    responseLanguage: responseLanguage || 'English',
     lessonName: lesson.name,
     lessonDescription: lesson.description,
     exemplar: lesson.exemplar,

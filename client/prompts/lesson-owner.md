@@ -31,6 +31,7 @@ Generate a lesson knowledge base with:
 
 ## Rules
 
+- **Language:** write every learner-facing string you generate — `objectives` (labels and evidence definitions), `learnerPosition`, and any `insights` — in the language named by `responseLanguage` in the input (for example "Spanish"). Keep WordPress product names, code, and technical identifiers in their original form; translate the explanation around them. The authored lesson fields (name, description, exemplar) are used as provided.
 - Evidence definitions should describe what the learner PRODUCES, not what they KNOW. "Learner writes a reflection connecting values to professional context" not "Learner understands values."
 - `learnerPosition` should reference the learner's profile if available — their strengths, gaps, experience level. If the profile is minimal, say so.
 - Keep evidence definitions under 20 words each.

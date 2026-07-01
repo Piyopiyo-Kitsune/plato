@@ -3,7 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext.jsx';
 import AppShell from './components/AppShell.jsx';
 import LessonsList from './pages/LessonsList.jsx';
+import CoursesList from './pages/CoursesList.jsx';
 import LessonChat from './pages/LessonChat.jsx';
+import EmbedLessonChat from './pages/EmbedLessonChat.jsx';
+import EmbedHome from './pages/EmbedHome.jsx';
 import Settings from './pages/Settings.jsx';
 import Login from './pages/Login.jsx';
 import Signup from './pages/Signup.jsx';
@@ -12,6 +15,7 @@ import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
 import ScreenReaderAnnounce from './components/ScreenReaderAnnounce.jsx';
 import { BrandingProvider } from './contexts/BrandingContext.jsx';
+import { I18nProvider } from './contexts/I18nContext.jsx';
 
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.jsx'));
 const AdminHome = lazy(() => import('./pages/admin/AdminHome.jsx'));
@@ -87,13 +91,20 @@ export default function App() {
   }
 
   return (
-    <>
+    <I18nProvider>
       <ScreenReaderAnnounce />
       <Routes>
         <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
         <Route path="/signup" element={<RequireGuest><Signup /></RequireGuest>} />
         <Route path="/forgot-password" element={<RequireGuest><ForgotPassword /></RequireGuest>} />
         <Route path="/reset-password" element={<RequireGuest><ResetPassword /></RequireGuest>} />
+
+        {/* WordPress embed — authenticates itself via a one-time bridge code,
+            so it sits outside RequireAuth and the classroom AppShell chrome. */}
+        <Route path="/embed/lesson/:lessonGroupId" element={<EmbedLessonChat />} />
+        {/* Full-app "courses home" embed — boots the bridge session then hands
+            off to the normal authenticated app (embed-aware AppShell chrome). */}
+        <Route path="/embed/home" element={<EmbedHome />} />
 
         <Route path="/plato/*" element={
           <RequireAuth>
@@ -129,18 +140,22 @@ export default function App() {
             <BrandingProvider>
             <AppShell>
               <Routes>
-                <Route path="/lessons" element={<LessonsList />} />
-                <Route path="/lessons/create" element={<Navigate to="/lessons" replace />} />
+                <Route path="/courses" element={<CoursesList />} />
+                <Route path="/courses/:courseId" element={<LessonsList />} />
+                {/* The flat "all lessons" page is never shown to learners — they
+                    browse by course. Redirect any lingering link to Courses. */}
+                <Route path="/lessons" element={<Navigate to="/courses" replace />} />
+                <Route path="/lessons/create" element={<Navigate to="/courses" replace />} />
                 <Route path="/lessons/:lessonGroupId" element={<LessonChat />} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/" element={<Navigate to="/lessons" replace />} />
-                <Route path="*" element={<Navigate to="/lessons" replace />} />
+                <Route path="/" element={<Navigate to="/courses" replace />} />
+                <Route path="*" element={<Navigate to="/courses" replace />} />
               </Routes>
             </AppShell>
             </BrandingProvider>
           </RequireAuth>
         } />
       </Routes>
-    </>
+    </I18nProvider>
   );
 }

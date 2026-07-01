@@ -1,0 +1,45 @@
+/**
+ * Front-end styles for the Agentic Coach block.
+ */
+
+.agentic-coach {
+	margin: 1.5rem 0;
+}
+
+.agentic-coach__heading {
+	margin: 0 0 0.25rem;
+}
+
+.agentic-coach__intro {
+	margin: 0 0 1rem;
+	opacity: 0.85;
+}
+
+.agentic-coach__mount {
+	position: relative;
+	border: 1px solid rgba( 0, 0, 0, 0.1 );
+	border-radius: 8px;
+	overflow: hidden;
+	background: #fff;
+}
+
+.agentic-coach--compact .agentic-coach__frame {
+	min-height: 480px;
+}
+
+.agentic-coach__frame {
+	display: block;
+	width: 100%;
+}
+
+.agentic-coach__status,
+.agentic-coach__notice {
+	padding: 1rem;
+	color: #555;
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	.agentic-coach__mount {
+		scroll-behavior: auto;
+	}
+}

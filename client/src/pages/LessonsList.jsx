@@ -1,8 +1,9 @@
 import { Fragment, useState, useEffect, useMemo, useId } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext.jsx';
 import { getLessonKB } from '../../js/storage.js';
 import { authenticatedFetch } from '../../js/auth.js';
+import { useT } from '../contexts/I18nContext.jsx';
 import Check from 'lucide-react/dist/esm/icons/check';
 import HelpCircle from 'lucide-react/dist/esm/icons/help-circle';
 import { Card } from '@/components/ui/card';
@@ -39,13 +40,13 @@ function lessonStatusKey(d) {
 // both by the icon's aria-label/title and by the open-lesson button's
 // accessible name). Keeping it here means SR users hear the same wording
 // no matter which path led them to the status info.
-function statusAnnouncement(d) {
-  if (d?.status === 'completed') return 'Completed';
+function statusAnnouncement(d, t) {
+  if (d?.status === 'completed') return t('lessons.completed');
   if (d?.status) {
     const pct = d.progress != null ? d.progress * 10 : null;
-    return pct != null ? `In progress, ${pct}% complete` : 'In progress';
+    return pct != null ? `${t('lessons.inProgress')} · ${pct}%` : t('lessons.inProgress');
   }
-  return 'Not started';
+  return t('lessons.notStarted');
 }
 
 function formatTimeRange(p20, p80) {
@@ -59,6 +60,7 @@ function formatTimeRange(p20, p80) {
 export default function LessonsList() {
   const { state } = useApp();
   const navigate = useNavigate();
+  const t = useT();
   const { lessons, loaded } = state;
   const [lessonData, setLessonData] = useState({});
   const [timeStats, setTimeStats] = useState({});
@@ -66,6 +68,13 @@ export default function LessonsList() {
   const [courseFilter, setCourseFilter] = useState(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState(STATUS_ALL);
   const [page, setPage] = useState(1);
+
+  // When rendered at /courses/:courseId this view is locked to one course: the
+  // course is fixed by the route (so the dropdown is hidden) and the page shows
+  // a course title + back link. At /lessons there is no param, so it behaves as
+  // the full, filterable list.
+  const lockedCourse = useParams().courseId || null;
+  const activeCourse = lockedCourse || courseFilter;
 
   useEffect(() => {
     (async () => {
@@ -135,6 +144,7 @@ export default function LessonsList() {
   // current filter was just deleted server-side), fall back to "all" so the
   // user isn't stranded on a stale filter that matches nothing.
   useEffect(() => {
+    if (lockedCourse) return; // route-locked course is authoritative; never reset it.
     if (!hasCourseFilter && courseFilter !== FILTER_ALL) {
       setCourseFilter(FILTER_ALL);
     } else if (
@@ -144,15 +154,15 @@ export default function LessonsList() {
     ) {
       setCourseFilter(FILTER_ALL);
     }
-  }, [hasCourseFilter, courseFilter, courseOptions.named]);
+  }, [lockedCourse, hasCourseFilter, courseFilter, courseOptions.named]);
 
   // Apply both filters. Course narrows by taxonomy; status narrows by the
   // learner's progress on each lesson. Combined as logical AND so the grid
   // only shows lessons matching every active filter.
   const filtered = useMemo(() => {
     let result = lessons;
-    if (courseFilter === FILTER_NONE) result = result.filter((l) => !l.course?.id);
-    else if (courseFilter !== FILTER_ALL) result = result.filter((l) => l.course?.id === courseFilter);
+    if (activeCourse === FILTER_NONE) result = result.filter((l) => !l.course?.id);
+    else if (activeCourse !== FILTER_ALL) result = result.filter((l) => l.course?.id === activeCourse);
     if (statusFilter !== STATUS_ALL) {
       result = result.filter((l) => lessonStatusKey(lessonData[l.lessonId]) === statusFilter);
     }
@@ -170,18 +180,54 @@ export default function LessonsList() {
       // Within the same course (or both uncategorized), sort by lesson name
       return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [lessons, courseFilter, statusFilter, lessonData]);
+  }, [lessons, activeCourse, statusFilter, lessonData]);
+
+  // Course-detail view (locked to one course): group lessons under a module
+  // header instead of a flat grid. Modules are ordered by the author-assigned
+  // `moduleOrder` (unordered modules — and lessons with no module at all — sort
+  // last, under "Other"); lessons within a module are ordered by `order`, with a
+  // name fallback so unordered lessons are still stable and alphabetical.
+  const moduleGroups = useMemo(() => {
+    if (!lockedCourse) return null;
+    const groups = new Map();
+    const NO_MODULE = '__none__';
+    for (const l of filtered) {
+      const key = l.module || NO_MODULE;
+      if (!groups.has(key)) {
+        groups.set(key, { key, name: l.module || 'Other', order: l.module ? l.moduleOrder : null, lessons: [] });
+      }
+      groups.get(key).lessons.push(l);
+    }
+    for (const g of groups.values()) {
+      g.lessons.sort((a, b) => {
+        const orderA = a.order ?? Infinity;
+        const orderB = b.order ?? Infinity;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+    }
+    return [...groups.values()].sort((a, b) => {
+      if (a.key === NO_MODULE && b.key !== NO_MODULE) return 1;
+      if (a.key !== NO_MODULE && b.key === NO_MODULE) return -1;
+      const orderA = a.order ?? Infinity;
+      const orderB = b.order ?? Infinity;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [lockedCourse, filtered]);
 
   // Pagination math. We clamp the current page to the available range so a
   // filter that shrinks the list below the current page doesn't strand us.
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // The course-detail (locked) view groups by module instead of paginating —
+  // a single course's lesson count is small enough to show in full.
+  const totalPages = lockedCourse ? 1 : Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const visibleLessons = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleLessons = lockedCourse ? filtered : filtered.slice(pageStart, pageStart + PAGE_SIZE);
 
   // Reset to page 1 whenever any filter changes so we never land on an
   // out-of-range page after a tighter filter.
-  useEffect(() => { setPage(1); }, [courseFilter, statusFilter]);
+  useEffect(() => { setPage(1); }, [activeCourse, statusFilter]);
 
   // Live announcement: assembled from filter + page state. Updates whenever
   // either changes, which is exactly the moment screen reader users need to
@@ -190,16 +236,23 @@ export default function LessonsList() {
   // the first time on render is sometimes missed).
   const filterPhrase = useMemo(() => {
     const phrases = [];
-    if (courseFilter === FILTER_NONE) phrases.push('without a course');
-    else if (courseFilter !== FILTER_ALL) {
-      const name = courseOptions.named.find((c) => c.id === courseFilter)?.name;
+    if (activeCourse === FILTER_NONE) phrases.push('without a course');
+    else if (activeCourse !== FILTER_ALL) {
+      const name = courseOptions.named.find((c) => c.id === activeCourse)?.name;
       phrases.push(name ? `in the course "${name}"` : 'in the selected course');
     }
     if (statusFilter === STATUS_NOT_STARTED) phrases.push('not started');
     else if (statusFilter === STATUS_IN_PROGRESS) phrases.push('in progress');
     else if (statusFilter === STATUS_COMPLETED) phrases.push('completed');
     return phrases.join(', ');
-  }, [courseFilter, statusFilter, courseOptions.named]);
+  }, [activeCourse, statusFilter, courseOptions.named]);
+
+  // Display name for the route-locked course heading.
+  const lockedCourseName = lockedCourse
+    ? (lockedCourse === FILTER_NONE
+      ? 'Uncategorized'
+      : (courseOptions.named.find((c) => c.id === lockedCourse)?.name || 'Course'))
+    : null;
 
   const announcement = useMemo(() => {
     // Empty while still loading. Once `loaded` flips, the live region's
@@ -226,39 +279,48 @@ export default function LessonsList() {
   return (
     <div className="mx-auto max-w-5xl p-4">
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-semibold">Lessons</h1>
+        {lockedCourse ? (
+          <div>
+            <Link to="/courses" className="text-sm text-muted-foreground hover:text-foreground">
+              &larr; {t('lessons.allCourses')}
+            </Link>
+            <h1 className="text-xl font-semibold">{lockedCourseName}</h1>
+          </div>
+        ) : (
+          <h1 className="text-xl font-semibold">{t('lessons.title')}</h1>
+        )}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {hasCourseFilter && (
+          {!lockedCourse && hasCourseFilter && (
             <div className="flex items-center gap-2">
-              <label htmlFor="course-filter" className="text-sm text-muted-foreground">Course</label>
+              <label htmlFor="course-filter" className="text-sm text-muted-foreground">{t('lessons.filterCourse')}</label>
               <select
                 id="course-filter"
                 value={courseFilter}
                 onChange={(e) => setCourseFilter(e.target.value)}
                 className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                <option value={FILTER_ALL}>All courses</option>
+                <option value={FILTER_ALL}>{t('lessons.allCourses')}</option>
                 {courseOptions.named.map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
                 {courseOptions.hasUncategorized && (
-                  <option value={FILTER_NONE}>Uncategorized</option>
+                  <option value={FILTER_NONE}>{t('courses.uncategorized')}</option>
                 )}
               </select>
             </div>
           )}
           <div className="flex items-center gap-2">
-            <label htmlFor="status-filter" className="text-sm text-muted-foreground">Status</label>
+            <label htmlFor="status-filter" className="text-sm text-muted-foreground">{t('lessons.filterStatus')}</label>
             <select
               id="status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <option value={STATUS_ALL}>All statuses</option>
-              <option value={STATUS_NOT_STARTED}>Not started</option>
-              <option value={STATUS_IN_PROGRESS}>In progress</option>
-              <option value={STATUS_COMPLETED}>Completed</option>
+              <option value={STATUS_ALL}>{t('lessons.allStatuses')}</option>
+              <option value={STATUS_NOT_STARTED}>{t('lessons.notStarted')}</option>
+              <option value={STATUS_IN_PROGRESS}>{t('lessons.inProgress')}</option>
+              <option value={STATUS_COMPLETED}>{t('lessons.completed')}</option>
             </select>
           </div>
         </div>
@@ -277,21 +339,60 @@ export default function LessonsList() {
         // region above is the single announcer; it fires when its content
         // transitions from '' (loading) to "Showing N lessons" (loaded).
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          Loading lessons…
+          {t('lessons.loading')}
         </div>
       ) : lessons.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          No lessons yet.
+          {t('lessons.noneYet')}
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center text-muted-foreground">
-          No lessons match this filter.
+          {t('lessons.noMatch')}
+        </div>
+      ) : moduleGroups && !(moduleGroups.length === 1 && moduleGroups[0].key === '__none__') ? (
+        // Real module grouping exists for this course — show a header per
+        // module. When every visible lesson is unassigned (the single "Other"
+        // group), fall through to the plain flat grid below instead — a lone
+        // "Other" heading with nothing to contrast against is just noise.
+        <div className="space-y-8">
+          {moduleGroups.map((group) => {
+            const groupName = group.key === '__none__' ? t('lessons.other') : group.name;
+            return (
+            <section key={group.key} aria-labelledby={`module-${group.key}`}>
+              <h2 id={`module-${group.key}`} className="text-base font-semibold mb-3">
+                {groupName}
+              </h2>
+              <ul
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                role="list"
+                aria-label={`${t('lessons.title')} — ${groupName}`}
+              >
+                {group.lessons.map((c, i) => (
+                  <li
+                    key={c.lessonId}
+                    className="animate-in fade-in slide-in-from-bottom-2 fill-mode-both list-none"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <LessonCard
+                      lesson={c}
+                      progress={lessonData[c.lessonId]}
+                      timeStats={timeStats[c.lessonId]}
+                      onOpen={() => navigate(`/lessons/${c.lessonId}`)}
+                      onShowOverview={() => setDetailLesson(c)}
+                      hideCourse
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+            );
+          })}
         </div>
       ) : (
         <ul
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
           role="list"
-          aria-label="Lessons"
+          aria-label={t('lessons.title')}
         >
           {visibleLessons.map((c, i) => (
             <li
@@ -310,6 +411,7 @@ export default function LessonsList() {
                 timeStats={timeStats[c.lessonId]}
                 onOpen={() => navigate(`/lessons/${c.lessonId}`)}
                 onShowOverview={() => setDetailLesson(c)}
+                hideCourse={!!lockedCourse}
               />
             </li>
           ))}
@@ -323,21 +425,21 @@ export default function LessonsList() {
             size="sm"
             disabled={currentPage <= 1}
             onClick={() => setPage((p) => Math.max(1, p - 1))}
-            aria-label="Previous page"
+            aria-label={t('lessons.prev')}
           >
-            &larr; Previous
+            &larr; {t('lessons.prev')}
           </Button>
           <span className="text-sm text-muted-foreground tabular-nums" aria-current="page">
-            Page {currentPage} of {totalPages}
+            {t('lessons.page', { current: currentPage, total: totalPages })}
           </span>
           <Button
             variant="outline"
             size="sm"
             disabled={currentPage >= totalPages}
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            aria-label="Next page"
+            aria-label={t('lessons.next')}
           >
-            Next &rarr;
+            {t('lessons.next')} &rarr;
           </Button>
         </nav>
       )}
@@ -355,7 +457,8 @@ export default function LessonsList() {
   );
 }
 
-function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview }) {
+function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview, hideCourse }) {
+  const t = useT();
   // Stable id per card so the open-lesson button can describe itself with
   // the meta strip — Tab navigation announces course + time as
   // supplementary context (status now lives in the indicator and the
@@ -370,7 +473,9 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview }) {
   if (lesson.lessonId.startsWith('custom-')) {
     parts.push({ key: 'custom', text: 'My Lesson' });
   }
-  if (lesson.course?.name) {
+  // Suppressed inside a single course's page (course is already the page
+  // header / module heading there, so repeating it on every card is noise).
+  if (lesson.course?.name && !hideCourse) {
     parts.push({ key: 'course', text: lesson.course.name });
   }
   if (range) {
@@ -387,7 +492,7 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview }) {
     });
   }
 
-  const statusText = statusAnnouncement(progress);
+  const statusText = statusAnnouncement(progress, t);
 
   return (
     <Card className="h-full transition-shadow hover:shadow-md group gap-0 p-0">
@@ -458,7 +563,7 @@ function LessonCard({ lesson, progress, timeStats, onOpen, onShowOverview }) {
           size="sm"
           className="ml-auto h-7 w-7 p-0 text-muted-foreground hover:text-primary shrink-0"
           onClick={onShowOverview}
-          aria-label={`View ${lesson.learningObjectives.length} objectives for ${lesson.name}`}
+          aria-label={`${t('lessons.overviewCount', { count: lesson.learningObjectives.length })} — ${lesson.name}`}
         >
           <HelpCircle className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -536,6 +641,7 @@ function ProgressRing({ pct, size = 22, stroke = 2.5 }) {
 }
 
 function LessonDetailDialog({ lesson, progress, timeStats, open, onOpenChange }) {
+  const t = useT();
   const pct = progress?.status === 'completed' ? 100 : (progress?.progress != null ? progress.progress * 10 : null);
   const progressText = progress?.status === 'completed' ? 'Completed' : (pct != null ? `${pct}% complete` : null);
   const range = timeStats && (timeStats.sampleSize ?? 0) >= 3
@@ -602,7 +708,7 @@ function LessonDetailDialog({ lesson, progress, timeStats, open, onOpenChange })
           </div>
 
           <div>
-            <h3 className="text-sm font-medium mb-1">Learning objectives</h3>
+            <h3 className="text-sm font-medium mb-1">{t('lessons.objectives')}</h3>
             <ul className="list-disc pl-5 text-sm text-muted-foreground leading-relaxed space-y-1">
               {lesson.learningObjectives.map((obj, i) => (
                 <li key={i}>{obj}</li>

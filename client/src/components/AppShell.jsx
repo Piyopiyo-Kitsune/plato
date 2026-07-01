@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useBranding } from '../contexts/BrandingContext.jsx';
 import { useViewTransition } from '../hooks/useViewTransition.js';
+import { isEmbedded } from '../lib/embed.js';
+import { LANGUAGES } from '../lib/language.js';
+import { useT, useLanguage } from '../contexts/I18nContext.jsx';
 import * as DropdownMenuRadix from '@radix-ui/react-dropdown-menu';
 import {
   AlertDialog, AlertDialogContent, AlertDialogHeader,
@@ -20,6 +23,17 @@ export default function AppShell({ children }) {
   const [viewAsOpen, setViewAsOpen] = useState(false);
   const isAdmin = user?.role === 'admin';
   const impersonating = !!impersonatedUser;
+  // In the WordPress embed the learner's identity is their WordPress account, so
+  // Plato's own account management (email/username/password/sign-out) is hidden;
+  // only the "Your data & privacy" controls remain reachable. See 7a.
+  const embedded = isEmbedded();
+
+  // Coaching language switcher. Backed by the app-wide I18n context so changing
+  // it re-translates the whole UI instantly and persists to preferences (which
+  // the coach and the AI-generated lesson overview also read).
+  const t = useT();
+  const { lang, setLanguage } = useLanguage();
+  const handleLanguageChange = (e) => setLanguage(e.target.value);
 
   useEffect(() => {
     if (sessionExpired) {
@@ -110,7 +124,7 @@ export default function AppShell({ children }) {
         role="banner"
       >
         <nav className="mx-auto max-w-5xl flex items-center gap-2" aria-label="Main navigation">
-          <a href="/lessons" onClick={e => { e.preventDefault(); navigate('/lessons'); }} className="shrink-0" aria-label="Go to lessons list">
+          <a href="/courses" onClick={e => { e.preventDefault(); navigate('/courses'); }} className="shrink-0" aria-label={t('nav.goToCourses')}>
             {classroomLogo ? (
               <img src={classroomLogo} alt="" className="h-8 w-auto" />
             ) : (
@@ -118,67 +132,114 @@ export default function AppShell({ children }) {
             )}
           </a>
           <div className="flex-1" />
-          <DropdownMenuRadix.Root>
-            <DropdownMenuRadix.Trigger asChild>
-              <button
-                type="button"
-                className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
-                aria-label={`Account: ${user?.username || user?.email || 'signed in'}`}
-              >
-                {user?.name || user?.username || user?.email || 'Account'}
-              </button>
-            </DropdownMenuRadix.Trigger>
-            <DropdownMenuRadix.Portal>
-              <DropdownMenuRadix.Content
-                align="end"
-                sideOffset={4}
-                className="z-50 min-w-[180px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
-              >
-                <DropdownMenuRadix.Label className="px-2 py-1.5 text-xs text-muted-foreground">
-                  {user?.email || ''}
-                </DropdownMenuRadix.Label>
-                <DropdownMenuRadix.Separator className="my-1 h-px bg-border" />
-                <DropdownMenuRadix.Item
-                  className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
-                  onSelect={() => navigate('/settings')}
+          {/* Coaching language switcher — always visible so learners can
+              override the detected language at any time (multilingual Phase 1). */}
+          <div className="flex items-center gap-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="opacity-80">
+              <circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            <label htmlFor="coach-language" className="sr-only">{t('nav.language')}</label>
+            <select
+              id="coach-language"
+              value={lang}
+              onChange={handleLanguageChange}
+              className="bg-transparent text-inherit text-sm rounded-md border border-white/30 px-2 py-1 outline-none cursor-pointer hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code} className="text-foreground bg-background">{l.label}</option>
+              ))}
+            </select>
+          </div>
+          {embedded ? (
+            /* Embedded: identity is the WordPress account. A "Hi, {name}" menu
+               offers only the data & privacy controls — no email, no sign-out. */
+            <DropdownMenuRadix.Root>
+              <DropdownMenuRadix.Trigger asChild>
+                <button
+                  type="button"
+                  className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
+                  aria-label={user?.name ? t('account.menuFor', { name: user.name }) : t('account.menu')}
                 >
-                  User Settings
-                </DropdownMenuRadix.Item>
-                <DropdownMenuRadix.Item
-                  className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
-                  onSelect={() => setSignOutOpen(true)}
+                  {user?.name ? t('account.greeting', { name: user.name }) : t('account.menu')}
+                </button>
+              </DropdownMenuRadix.Trigger>
+              <DropdownMenuRadix.Portal>
+                <DropdownMenuRadix.Content
+                  align="end"
+                  sideOffset={4}
+                  className="z-50 min-w-[180px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
                 >
-                  Sign Out
-                </DropdownMenuRadix.Item>
-              </DropdownMenuRadix.Content>
-            </DropdownMenuRadix.Portal>
-          </DropdownMenuRadix.Root>
+                  <DropdownMenuRadix.Item
+                    className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
+                    onSelect={() => navigate('/settings')}
+                  >
+                    {t('account.dataPrivacy')}
+                  </DropdownMenuRadix.Item>
+                </DropdownMenuRadix.Content>
+              </DropdownMenuRadix.Portal>
+            </DropdownMenuRadix.Root>
+          ) : (
+            <DropdownMenuRadix.Root>
+              <DropdownMenuRadix.Trigger asChild>
+                <button
+                  type="button"
+                  className="text-inherit opacity-80 hover:opacity-100 hover:bg-white/10 cursor-pointer bg-transparent border-none rounded-md px-3 py-1.5 text-sm font-medium outline-none"
+                  aria-label={`Account: ${user?.username || user?.email || 'signed in'}`}
+                >
+                  {user?.name || user?.username || user?.email || 'Account'}
+                </button>
+              </DropdownMenuRadix.Trigger>
+              <DropdownMenuRadix.Portal>
+                <DropdownMenuRadix.Content
+                  align="end"
+                  sideOffset={4}
+                  className="z-50 min-w-[180px] rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
+                >
+                  <DropdownMenuRadix.Label className="px-2 py-1.5 text-xs text-muted-foreground">
+                    {user?.email || ''}
+                  </DropdownMenuRadix.Label>
+                  <DropdownMenuRadix.Separator className="my-1 h-px bg-border" />
+                  <DropdownMenuRadix.Item
+                    className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent"
+                    onSelect={() => navigate('/settings')}
+                  >
+                    {t('account.userSettings')}
+                  </DropdownMenuRadix.Item>
+                  <DropdownMenuRadix.Item
+                    className="flex cursor-pointer items-center rounded-md px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 focus:bg-destructive/10"
+                    onSelect={() => setSignOutOpen(true)}
+                  >
+                    {t('account.signOut')}
+                  </DropdownMenuRadix.Item>
+                </DropdownMenuRadix.Content>
+              </DropdownMenuRadix.Portal>
+            </DropdownMenuRadix.Root>
+          )}
         </nav>
       </header>
 
-      <main id="main-content" className={`flex-1 overflow-y-auto bg-stone-100 dark:bg-stone-900 ${animClass}`} tabIndex={-1}>
+      {/* scroll-padding keeps a keyboard-focused element clear of the pinned
+          header (top) and fixed compose bar (bottom) — WCAG 2.2 SC 2.4.11. */}
+      <main id="main-content" className={`flex-1 overflow-y-auto scroll-pt-16 scroll-pb-32 bg-stone-100 dark:bg-stone-900 ${animClass}`} tabIndex={-1}>
         {children}
       </main>
 
-      <footer className="shrink-0 border-t px-4 py-2 text-center text-xs text-muted-foreground">
-        Powered by <a href="https://github.com/1111philo/plato" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">plato</a>.
-      </footer>
 
       <AlertDialog open={signOutOpen} onOpenChange={setSignOutOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign Out?</AlertDialogTitle>
+            <AlertDialogTitle>{t('account.signOutTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              You&apos;ll need to sign in again to access your lessons.
+              {t('account.signOutDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive/10 text-destructive hover:bg-destructive/20"
               onClick={handleSignOut}
             >
-              Sign Out
+              {t('account.signOut')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -3,17 +3,21 @@ import {
   AlertDialogTitle, AlertDialogDescription, AlertDialogFooter,
   AlertDialogAction, AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { useT } from '../../contexts/I18nContext.jsx';
 
 export default function ConfirmModal({
   open,
   onOpenChange,
   title,
   message,
-  cancelLabel = 'Cancel',
-  confirmLabel = 'Confirm',
+  cancelLabel,
+  confirmLabel,
   variant = 'destructive',
   onConfirm,
 }) {
+  const t = useT();
+  const cancel = cancelLabel ?? t('common.cancel');
+  const confirm = confirmLabel ?? t('common.confirm');
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
@@ -22,7 +26,7 @@ export default function ConfirmModal({
           <AlertDialogDescription>{message}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
+          <AlertDialogCancel>{cancel}</AlertDialogCancel>
           <AlertDialogAction
             className={
               variant === 'destructive' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20'
@@ -31,7 +35,7 @@ export default function ConfirmModal({
             }
             onClick={() => { onConfirm(); }}
           >
-            {confirmLabel}
+            {confirm}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

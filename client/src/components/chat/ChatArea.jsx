@@ -1,6 +1,23 @@
 import { useRef, useEffect, useCallback, forwardRef } from 'react';
 import { useChatKeyboardNav } from '../../hooks/useChatKeyboardNav.js';
 
+// Nearest scrollable ancestor of `node`, or null. Used to keep auto-scroll
+// contained: scrollIntoView bubbles to EVERY ancestor scroll container — including
+// the host window when the chat is embedded in an iframe — which scrolls the
+// parent WordPress page as the coach streams. Setting scrollTop on this container
+// instead moves only the chat, never the host page.
+function getScrollParent(node) {
+  let el = node?.parentElement;
+  while (el && el !== document.body) {
+    const overflowY = getComputedStyle(el).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay') {
+      return el;
+    }
+    el = el.parentElement;
+  }
+  return null;
+}
+
 const ChatArea = forwardRef(function ChatArea({ children, scrollTrigger, announcement }, ref) {
   const logRef = useRef(null);
   const bottomRef = useRef(null);
@@ -15,7 +32,15 @@ const ChatArea = forwardRef(function ChatArea({ children, scrollTrigger, announc
   useChatKeyboardNav(logRef);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const bottom = bottomRef.current;
+    if (!bottom) return;
+    const scroller = getScrollParent(bottom);
+    if (scroller) {
+      scroller.scrollTo({ top: scroller.scrollHeight, behavior: 'smooth' });
+    } else {
+      // No internal scroll container (rare) — fall back to the previous behavior.
+      bottom.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [scrollTrigger]);
 
   return (

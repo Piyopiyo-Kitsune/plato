@@ -3,6 +3,9 @@ import { useAutoResize } from '../../hooks/useAutoResize.js';
 import { compressImageDataUrl } from '../../lib/imageCompression.js';
 import { fetchLinkContent } from '../../lib/links.js';
 import { Button } from '@/components/ui/button';
+import { getPreferences, savePreferences } from '../../../js/storage.js';
+import { useT } from '../../contexts/I18nContext.jsx';
+import ImageConsentDialog, { hasImageConsent } from './ImageConsentDialog.jsx';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // Bedrock 5 MB limit
@@ -36,6 +39,7 @@ export default function ComposeBar({
   links: linksProp,
   onLinksChange,
 }) {
+  const t = useT();
   const [localText, setLocalText] = useState('');
   const [localImages, setLocalImages] = useState([]); // array of { dataUrl, name }
   const [localLinks, setLocalLinks] = useState([]); // array of { url, title, siteName, text }
@@ -48,6 +52,22 @@ export default function ComposeBar({
   const setLinks = onLinksChange || setLocalLinks;
   const inputRef = useRef(null);
   const fileRef = useRef(null);
+  // Files awaiting the one-time image-consent gate. Held here so a paste or file
+  // pick that arrives before consent is preserved and processed on agree.
+  const pendingFilesRef = useRef(null);
+  const [consentOpen, setConsentOpen] = useState(false);
+  // When on, plain Enter sends and Shift+Enter inserts a newline. When off
+  // (default), Enter inserts a newline and Cmd/Ctrl+Enter sends. Persisted per
+  // learner in preferences so it sticks across sessions.
+  const [enterToSend, setEnterToSend] = useState(false);
+  useEffect(() => {
+    (async () => setEnterToSend(!!(await getPreferences())?.enterToSend))();
+  }, []);
+  const handleEnterToSendChange = async (checked) => {
+    setEnterToSend(checked);
+    const prefs = (await getPreferences()) || {};
+    await savePreferences({ ...prefs, enterToSend: checked });
+  };
   const linkInputRef = useRef(null);
   const linkButtonRef = useRef(null);
   const handleResize = useAutoResize();
@@ -55,6 +75,7 @@ export default function ComposeBar({
   const statusId = useId();
   const linkInputId = useId();
   const linkGroupId = useId();
+  const enterToSendId = useId();
   const [loadingCount, setLoadingCount] = useState(0);
 
   // Link-attach UI state.
@@ -164,11 +185,56 @@ export default function ComposeBar({
     }
   };
 
+  // Consent gate: on a learner's first image, hold the files and show the
+  // one-time consent dialog; process them only after they agree. Once consent
+  // is remembered, images flow straight through.
+  const requestAddImages = (files) => {
+    if (!files.length) return;
+    if (hasImageConsent()) {
+      addImagesFromFiles(files);
+      return;
+    }
+    pendingFilesRef.current = files;
+    setConsentOpen(true);
+  };
+
+  // Opening the file picker is itself "accessing your files", so gate it behind
+  // consent BEFORE the OS dialog appears. If already consented, open directly.
+  const handleAttachClick = () => {
+    if (hasImageConsent()) {
+      fileRef.current?.click();
+    } else {
+      pendingFilesRef.current = null; // no files yet — this is a pre-pick gate
+      setConsentOpen(true);
+    }
+  };
+
+  const handleImageConsentAgree = () => {
+    setConsentOpen(false);
+    const pending = pendingFilesRef.current;
+    pendingFilesRef.current = null;
+    if (pending && pending.length) {
+      // Files already in hand (e.g. paste) — process them now.
+      addImagesFromFiles(pending);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } else {
+      // Consent granted from the attach button — now open the file picker.
+      requestAnimationFrame(() => fileRef.current?.click());
+    }
+  };
+
+  const handleImageConsentCancel = () => {
+    setConsentOpen(false);
+    pendingFilesRef.current = null;
+    // Return focus to the message box so keyboard users aren't stranded.
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
   const handleFileChange = async (e) => {
     const files = Array.from(e.target.files || []);
     if (fileRef.current) fileRef.current.value = '';
     if (!files.length) return;
-    await addImagesFromFiles(files);
+    requestAddImages(files);
   };
 
   const handlePaste = (e) => {
@@ -184,7 +250,7 @@ export default function ComposeBar({
     }
     if (files.length === 0) return;
     e.preventDefault();
-    addImagesFromFiles(files);
+    requestAddImages(files);
   };
 
   const removeImage = (idx) => {
@@ -248,6 +314,11 @@ export default function ComposeBar({
 
   return (
     <div className="px-4 pb-4 pt-2">
+      <ImageConsentDialog
+        open={consentOpen}
+        onAgree={handleImageConsentAgree}
+        onCancel={handleImageConsentCancel}
+      />
       <div className={`mx-auto max-w-3xl rounded-lg border border-input bg-background ${elevated ? 'shadow-lg' : ''}`}>
         {images.length > 0 && (
           <div className="m-2 flex flex-wrap gap-2">
@@ -312,7 +383,13 @@ export default function ComposeBar({
           value={text}
           onChange={(e) => { setText(e.target.value); handleResize(e); }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); }
+            if (e.key !== 'Enter') return;
+            if (enterToSend) {
+              // Enter sends; Shift+Enter (or the modifier combos) makes a newline.
+              if (!e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); send(); }
+            } else if (e.metaKey || e.ctrlKey) {
+              e.preventDefault(); send();
+            }
           }}
           onPaste={handlePaste}
           disabled={disabled}
@@ -365,11 +442,11 @@ export default function ComposeBar({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => fileRef.current?.click()}
+                onClick={handleAttachClick}
                 disabled={disabled || images.length >= MAX_IMAGES}
                 aria-label={images.length >= MAX_IMAGES
                   ? `Maximum ${MAX_IMAGES} images attached`
-                  : 'Attach images'}
+                  : t('compose.attachImages')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
@@ -403,11 +480,21 @@ export default function ComposeBar({
             </span>
           )}
           <div className="flex-1" />
+          <label htmlFor={enterToSendId} className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              id={enterToSendId}
+              type="checkbox"
+              checked={enterToSend}
+              onChange={(e) => handleEnterToSendChange(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-input accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            />
+            {t('compose.enterToSend')}
+          </label>
           <Button
             variant="default"
             size="icon-sm"
             className={`transition-opacity ${hasContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-            aria-label="Send"
+            aria-label={t('compose.send')}
             aria-describedby={(allowImages || allowLinks) && busy ? statusId : undefined}
             onClick={send}
             disabled={disabled || !hasContent || busy}

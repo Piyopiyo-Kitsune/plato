@@ -158,13 +158,16 @@ export async function converseStream(promptName, messages, onChunk, maxTokens = 
 
 // -- Lesson Owner (LLM) -------------------------------------------------------
 
-export async function initializeLessonKB(lesson, profileSummary) {
+export async function initializeLessonKB(lesson, profileSummary, responseLanguage) {
   const systemPrompt = await loadPrompt('lesson-owner');
   const userContent = JSON.stringify({
     lessonId: lesson.lessonId, lessonName: lesson.name,
     lessonDescription: lesson.description, exemplar: lesson.exemplar,
     learningObjectives: lesson.learningObjectives,
     learnerProfile: profileSummary || 'New learner, no profile yet.',
+    // Language for the learner-facing text this agent generates (objectives,
+    // insights, learnerPosition). Authored fields are used as-is; see lesson-owner.md.
+    responseLanguage: responseLanguage || 'English',
   });
   const callAgent = async () => {
     const { content } = await callApi({

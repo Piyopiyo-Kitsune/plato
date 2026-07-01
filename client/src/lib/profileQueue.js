@@ -4,11 +4,22 @@
 
 import {
   getLearnerProfile, saveLearnerProfile, saveLearnerProfileSummary,
+  getPreferences,
 } from '../../js/storage.js';
 import * as orchestrator from '../../js/orchestrator.js';
 import { syncInBackground } from './syncDebounce.js';
 
 let _profileUpdateQueue = Promise.resolve();
+
+/**
+ * Whether the learner allows profile/personalization tracking. When they have
+ * opted out (GDPR control in Settings → Your data & privacy), the coach stops
+ * building or updating a profile — coaching still works, just without it.
+ */
+export async function isProfileTrackingEnabled() {
+  const prefs = await getPreferences();
+  return !prefs?.profileOptOut;
+}
 
 export function queueProfileUpdate(fn) {
   _profileUpdateQueue = _profileUpdateQueue.then(fn).catch(e => {
@@ -57,6 +68,8 @@ async function saveProfileResult(existing, result) {
 }
 
 export async function ensureProfileExists(name = '') {
+  // Respect the learner's opt-out: don't create or store a profile at all.
+  if (!(await isProfileTrackingEnabled())) return null;
   let profile = await getLearnerProfile();
   if (!profile) {
     profile = defaultProfile();
@@ -73,6 +86,7 @@ export async function ensureProfileExists(name = '') {
 export function updateProfileInBackground(lessonId, assessmentResult) {
   queueProfileUpdate(async () => {
     const profile = await ensureProfileExists();
+    if (!profile) return; // opted out of tracking
     const updated = orchestrator.incrementalProfileUpdate(profile, lessonId, assessmentResult);
     await saveLearnerProfile(updated);
     syncInBackground('profile');
@@ -85,6 +99,7 @@ export function updateProfileInBackground(lessonId, assessmentResult) {
 export function updateProfileOnCompletionInBackground(lessonKB, lesson) {
   queueProfileUpdate(async () => {
     const profile = await ensureProfileExists();
+    if (!profile) return; // opted out of tracking
     const result = await orchestrator.updateProfileOnCompletion(
       profile, lessonKB, lesson.name, lesson.lessonId, lessonKB.activitiesCompleted
     );
@@ -104,6 +119,7 @@ export function updateProfileOnCompletionInBackground(lessonKB, lesson) {
 export function updateProfileFromObservation(lessonKB, observation) {
   queueProfileUpdate(async () => {
     const profile = await ensureProfileExists();
+    if (!profile) return; // opted out of tracking
     const result = await orchestrator.updateProfileFromFeedback(profile, observation, {
       lessonName: lessonKB.name || 'Lesson', activityType: 'coaching', activityGoal: 'Coach observation',
     });

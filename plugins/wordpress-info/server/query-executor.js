@@ -11,6 +11,7 @@
  */
 
 import { ALLOWED_HOSTS } from './sources.js';
+import { isMcpConfigured, queryWordPressContext } from './mcp-client.js';
 
 const TIMEOUT_MS = 8000;
 const MAX_RESULTS_PER_SOURCE = 5;
@@ -172,8 +173,13 @@ export async function executeQueries(queries, availableSources) {
     const queryResults = [];
     const sourcesToQuery = availableSources.filter(s => q.sources.includes(s.kind));
 
-    // Run all sources for this query in parallel
+    // Run all sources for this query in parallel. When the mcp-context-wporg
+    // sidecar is configured, also pull Make/WordPress-GitHub/Trac context over
+    // MCP — fail-open, so a sidecar problem never blocks enrichment.
     const sourcePromises = sourcesToQuery.map(source => querySource(source, q.text));
+    if (isMcpConfigured()) {
+      sourcePromises.push(queryWordPressContext(q.text));
+    }
     const sourceResults = await Promise.all(sourcePromises);
 
     // Flatten and dedupe by URL

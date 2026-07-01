@@ -12,6 +12,7 @@ import {
 } from '../../js/storage.js';
 import { invalidateLessonsCache, loadLessons } from '../../js/lessonOwner.js';
 import * as engine from '../lib/lessonEngine.js';
+import { useT } from '../contexts/I18nContext.jsx';
 
 import ChatArea from '../components/chat/ChatArea.jsx';
 import ThinkingSpinner from '../components/chat/ThinkingSpinner.jsx';
@@ -33,6 +34,7 @@ export default function LessonChat() {
   const { state, dispatch } = useApp();
   const { lessons } = state;
   const lesson = lessons.find(c => c.lessonId === lessonGroupId);
+  const t = useT();
   const { impersonatedUser } = useAuth();
   const impersonating = !!impersonatedUser;
 
@@ -69,6 +71,8 @@ export default function LessonChat() {
 
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState(null);
+  // Bumped by "Reset Lesson" to re-run the start effect in place (see below).
+  const [resetNonce, setResetNonce] = useState(0);
   const [showObjectives, setShowObjectives] = useState(false);
   const objectivesTitleRef = useRef(null);
   const [headerPinned, setHeaderPinned] = useState(false);
@@ -214,7 +218,7 @@ export default function LessonChat() {
     })();
 
     return () => { cancelled = true; };
-  }, [lessonGroupId, lessonLoaded, impersonating]);
+  }, [lessonGroupId, lessonLoaded, impersonating, resetNonce]);
 
   const handleSend = useCallback(async ({ text, imageDataUrls, links }) => {
     const hasImages = Array.isArray(imageDataUrls) && imageDataUrls.length > 0;
@@ -292,10 +296,22 @@ export default function LessonChat() {
 
   const handleReset = () => {
     setConfirmModal({
-      title: 'Reset Lesson?',
-      message: "This will delete all progress. You'll start from scratch.",
-      confirmLabel: 'Reset Lesson',
-      onConfirm: async () => { await deleteLessonProgress(lessonGroupId); navigate('/lessons'); },
+      title: t('lesson.resetTitle'),
+      message: t('lesson.resetMsg'),
+      confirmLabel: t('lesson.reset'),
+      // Clear progress and restart the lesson in place — the learner stays on
+      // this lesson rather than being sent to a list. Resetting local state and
+      // bumping resetNonce re-runs the start effect, which (finding no saved
+      // progress) starts the lesson fresh.
+      onConfirm: async () => {
+        await deleteLessonProgress(lessonGroupId);
+        setMessages([]);
+        setLessonKB(null);
+        setPhase(null);
+        setError('');
+        setStreamingText(null);
+        setResetNonce((n) => n + 1);
+      },
     });
   };
 
@@ -305,11 +321,13 @@ export default function LessonChat() {
       message: 'This will permanently delete this lesson and all its progress.',
       confirmLabel: 'Delete Lesson',
       onConfirm: async () => {
+        const courseId = lesson?.course?.id;
         await deleteLessonProgress(lessonGroupId);
         await deleteUserLesson(lessonGroupId);
         invalidateLessonsCache();
         dispatch({ type: 'REFRESH_LESSONS', lessons: await loadLessons() });
-        navigate('/lessons');
+        // The lesson is gone — return to its course (never the all-lessons list).
+        navigate(courseId ? `/courses/${courseId}` : '/courses');
       },
     });
   };
@@ -317,6 +335,12 @@ export default function LessonChat() {
   if (!state.loaded) return <div className="flex items-center justify-center py-12 text-muted-foreground" role="status" aria-live="polite">Loading...</div>;
   if (!lesson) return <p className="p-4 text-muted-foreground">Lesson not found.</p>;
   const busy = !!loading;
+
+  // The back arrow returns to the lesson's course (where the learner came from),
+  // not the flat all-lessons list. Falls back to the courses home when the
+  // lesson has no course.
+  const backTarget = lesson.course?.id ? `/courses/${lesson.course.id}` : '/courses';
+  const backLabel = lesson.course?.name ? t('lesson.backTo', { name: lesson.course.name }) : t('lesson.backToCourses');
   const composePlaceholder = phase === LESSON_PHASES.COMPLETED
     ? 'Share feedback about this lesson...'
     : 'Chat with your coach...';
@@ -383,7 +407,7 @@ export default function LessonChat() {
       {headerPinned && (
         <div id="lesson-header-pinned" aria-hidden="true" className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background px-4 py-2 shadow-md">
           <div className="mx-auto max-w-5xl flex items-center gap-2">
-            <Button variant="ghost" size="icon-sm" aria-label="Back to lessons" onClick={() => navigate('/lessons')}>
+            <Button variant="ghost" size="icon-sm" aria-label={backLabel} onClick={() => navigate(backTarget)}>
               &larr;
             </Button>
             <div className="flex-1 min-w-0">
@@ -395,7 +419,7 @@ export default function LessonChat() {
                   aria-expanded={showObjectives}
                   aria-controls="lesson-objectives-dialog"
                 >
-                  Lesson Overview ({lesson.learningObjectives.length} Objectives)
+                  {t('lessons.overviewCount', { count: lesson.learningObjectives.length })}
                 </button>
               </div>
               <ProgressBar lessonKB={lessonKB} />
@@ -422,7 +446,7 @@ export default function LessonChat() {
       {/* Inline header — observed for scroll position */}
       <div ref={headerRef} id="lesson-header" className="border-b border-border bg-background px-4 py-2">
         <div className="mx-auto max-w-5xl flex items-center gap-2">
-          <Button variant="ghost" size="icon-sm" aria-label="Back to lessons" onClick={() => navigate('/lessons')}>
+          <Button variant="ghost" size="icon-sm" aria-label={backLabel} onClick={() => navigate(backTarget)}>
             &larr;
           </Button>
           <div className="flex-1 min-w-0">
@@ -476,18 +500,18 @@ export default function LessonChat() {
                   size="lg"
                   onClick={() => navigate(`/lesson/${nextLesson.lessonId}`)}
                   className="min-w-[200px]"
-                  aria-label={`Continue to next lesson: ${nextLesson.name}`}
+                  aria-label={`${t('lesson.continueNext')}: ${nextLesson.name}`}
                 >
-                  Continue to Next Lesson
+                  {t('lesson.continueNext')}
                 </Button>
               ) : (
                 <Button
                   size="lg"
-                  onClick={() => navigate('/lessons')}
+                  onClick={() => navigate(backTarget)}
                   className="min-w-[200px]"
-                  aria-label="Back to lesson list"
+                  aria-label={backLabel}
                 >
-                  Back to Lesson List
+                  {lesson.course?.id ? t('lesson.backToCourse') : t('lesson.backToCourses')}
                 </Button>
               )}
             </div>
@@ -515,9 +539,12 @@ export default function LessonChat() {
         </div>
       )}
 
-      {/* Fixed compose overlay — interactive when pinned */}
+      {/* Fixed compose overlay — interactive when pinned. The wrapper is an
+          opaque, full-width strip anchored to the very bottom so chat content
+          scrolls *above* it (and is hidden behind it), never through the
+          transparent padding around the input or in a gap below it. */}
       {phase && composePinned && (
-        <div className="fixed bottom-9 left-0 right-0 z-50">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background">
           <ComposeBar
             placeholder={impersonating ? 'Read-only — viewing as another user' : composePlaceholder}
             onSend={handleSend}
@@ -544,11 +571,11 @@ export default function LessonChat() {
           </DialogHeader>
           <div className="overflow-y-auto flex-1 space-y-4 pr-2">
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Exemplar</h3>
+            <h3 className="text-sm font-medium">{t('lessons.exemplar')}</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">{lesson.exemplar}</p>
           </div>
           <div className="space-y-2">
-            <h3 className="text-sm font-medium">Learning Objectives</h3>
+            <h3 className="text-sm font-medium">{t('lessons.objectives')}</h3>
             <ul className="list-disc pl-5 text-sm text-muted-foreground leading-relaxed space-y-1">
               {lesson.learningObjectives.map((obj, i) => (
                 <li key={i}>{obj}</li>
@@ -557,9 +584,9 @@ export default function LessonChat() {
           </div>
           {lessonKB?.enrichments && lessonKB.enrichments.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-sm font-medium">Additional Context</h3>
+              <h3 className="text-sm font-medium">{t('lessons.additionalContext')}</h3>
               <p className="text-xs text-muted-foreground">
-                Reference material gathered for this lesson from enabled plugins
+                {t('lessons.additionalContextNote')}
               </p>
               {lessonKB.enrichments.map((enrichment, idx) => (
                 <section
