@@ -67,20 +67,20 @@ new data flow to design.
 
 ---
 
-## 3. Course detail grouped by module
+## 3. Course detail grouped by module ✅ DONE
 
-The course landing exists (Courses → click a course → its lessons). Next: in the
-course detail, **group lessons under module headers** (module name as a header,
-its lessons listed beneath, in order).
-
-Plan:
-- On publish, send the lesson's **module name + order** (and lesson order) to Plato
-  (`/v1/bridge/lesson`). For our CPT: `_agentic_module` title + `_agentic_order`.
-  For Sensei: the lesson's `module` taxonomy term (order best-effort).
-- Store `module` on the Plato lesson record (it then flows through `/v1/lessons`
-  automatically — `content.js` passes unknown fields through).
-- In the course-scoped `LessonsList`, render grouped by module (ordered), lessons
-  without a module under an "Other" heading last.
+In the course-detail view (Courses → a course), lessons are grouped under module
+headers, ordered. Implemented end-to-end and verified with a live bridge round-trip:
+- **Publish** sends the lesson's module name + order + lesson order to Plato
+  (`class-sync.php` → `class-plato-client.php::publish_lesson` → `/v1/bridge/lesson`).
+  CPT: `_agentic_module` title + `_agentic_order`. Sensei: the `module` taxonomy term,
+  with the course's `module_order` meta for display order (`class-sensei.php`).
+- **Bridge** stores `module` / `moduleOrder` / `order` on the `_system:lesson:<id>`
+  record (`bridge.js`); `content.js` passes them through to `/v1/lessons` via `...data`.
+- **Client** (`LessonsList`, route-locked course view) renders one `<section>` +
+  `<h2>` per module, modules ordered by `moduleOrder`, lessons within a module by
+  `order` (name fallback). Lessons with no module fall under "Other" last; when every
+  lesson is unassigned the lone "Other" heading is suppressed in favor of a flat grid.
 
 ---
 
