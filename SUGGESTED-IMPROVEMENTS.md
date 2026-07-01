@@ -206,9 +206,13 @@ Follow-up (not yet wired): connect **delete** to the server-side bridge erasure
 (`POST /v1/bridge/forget`) so deleting also clears the synced record, not just local +
 debounced sync. Today deletion removes the profile locally and syncs the empty state.
 
-### 7c. Image-upload consent (first use)
-Before the first image upload, show a consent modal the learner must accept. Draft copy:
+### 7c. Image-upload consent (first use) ✅ DONE
+Before the first image upload — gated on the **attach button**, before the OS file
+picker opens — the learner must accept a one-time consent modal
+(`ImageConsentDialog`, remembered per learner in `localStorage`). Shipped copy:
 > **Before you share an image**
+> - **What to upload:** screenshots or photos of your own lesson work.
+> - **Accepted formats:** PNG (.png), JPG (.jpg / .jpeg), GIF (.gif), or WebP (.webp).
 > - **What it's for:** images you upload are used only to help the coach review your
 >   lesson work.
 > - **Who can see it:** your coaching session and the people who run this learning
@@ -217,11 +221,11 @@ Before the first image upload, show a consent modal the learner must accept. Dra
 >   deleted when your data is deleted.
 > - **Please don't** upload anything inappropriate, offensive, or that isn't your own
 >   lesson work.
-> - **Note:** this coach may be used by learners of all ages, including minors.
 > [ ] I understand and agree.  ( Cancel / Continue )
 
-Persist acceptance per learner so it's shown once. Pair with the coach-prompt guardrail
-that already declines inappropriate images.
+Pairs with the coach-prompt guardrail that already declines inappropriate images.
+(The "used by minors" line was removed from this modal; the minors/safety obligation
+still lives in the coach guardrails.)
 
 ---
 

@@ -70,6 +70,10 @@ export default function ImageConsentDialog({ open, onAgree, onCancel }) {
             on, or an error message you&apos;d like help with.
           </li>
           <li>
+            <strong className="text-foreground">Accepted formats:</strong> image files such as PNG
+            (.png), JPG (.jpg / .jpeg), GIF (.gif), or WebP (.webp).
+          </li>
+          <li>
             <strong className="text-foreground">What it&apos;s for:</strong> images you upload
             are used only to help the coach review your lesson work.
           </li>
@@ -85,10 +89,6 @@ export default function ImageConsentDialog({ open, onAgree, onCancel }) {
           <li>
             <strong className="text-foreground">Please don&apos;t</strong> upload anything
             inappropriate, offensive, or that is not your own lesson work.
-          </li>
-          <li>
-            <strong className="text-foreground">Note:</strong> this coach may be used by learners
-            of all ages, including minors.
           </li>
         </ul>
 
