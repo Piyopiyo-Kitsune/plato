@@ -146,16 +146,24 @@ In the WordPress embed the learner is already authenticated as their WordPress u
 - The standalone Plato app keeps its own accounts (needed when there's no WordPress
   session).
 
-### 7b. GDPR — learner control over their stored profile
-Plato keeps a per-learner profile + chat history + course progress. Give learners
-explicit control and a clear notice:
-- A **"Your data & privacy"** panel in the coach: view the stored learner profile,
-  **edit** it, **delete** it, and **opt out** of profile/personalization tracking
-  (coach still works, just without the profile).
-- Wire deletion to the existing bridge erasure (`POST /v1/bridge/forget`) and Plato's
-  profile record; opt-out sets a flag the coach context respects.
-- A short, plain-language privacy notice at first use: what's stored, why, how to
-  delete it, that it's processed by Plato.
+### 7b. GDPR — learner control over their stored profile ✅ DONE
+Plato keeps a per-learner profile + chat history + course progress. Learners now have
+explicit control and a clear notice, in Settings → **"Your data & privacy"**:
+- **View / edit** the stored learner-profile summary (`saveLearnerProfileSummary`),
+  **delete** it (`deleteProfile` + `deleteProfileSummary`, with a confirm dialog), and
+  **opt out** of profile/personalization tracking — coach still works, just without the
+  profile.
+- Opt-out is a `preferences.profileOptOut` flag. Enforced in two places:
+  `profileQueue.js` (`isProfileTrackingEnabled()` guards `ensureProfileExists` and all
+  three update paths, so no profile is created or updated) and `lessonEngine.js` (the
+  `profileSummary` fed into `buildContext` is nulled when opted out, so the coach never
+  sees it).
+- A plain-language privacy notice sits at the top of the panel: what's stored, why, that
+  it's only for coaching / never sold, and how to turn it off or delete it.
+
+Follow-up (not yet wired): connect **delete** to the server-side bridge erasure
+(`POST /v1/bridge/forget`) so deleting also clears the synced record, not just local +
+debounced sync. Today deletion removes the profile locally and syncs the empty state.
 
 ### 7c. Image-upload consent (first use)
 Before the first image upload, show a consent modal the learner must accept. Draft copy:

@@ -17,7 +17,7 @@ import * as orchestrator from '../../js/orchestrator.js';
 import { authenticatedFetch } from '../../js/auth.js';
 import { compressImageDataUrl } from './imageCompression.js';
 import { syncInBackground } from './syncDebounce.js';
-import { ensureProfileExists, updateProfileOnCompletionInBackground, updateProfileFromObservation } from './profileQueue.js';
+import { ensureProfileExists, updateProfileOnCompletionInBackground, updateProfileFromObservation, isProfileTrackingEnabled } from './profileQueue.js';
 import { updateCourseProgressOnCompletionInBackground } from './courseProgressQueue.js';
 import { LESSON_PHASES, MSG_TYPES, MAX_EXCHANGES } from './constants.js';
 
@@ -152,7 +152,8 @@ export function cleanStream(onStream) {
 export async function startLesson(lessonId, lesson, onStream, onProgress) {
   assertNotImpersonating('start a lesson');
   await ensureProfileExists();
-  const profileSummary = await getLearnerProfileSummary();
+  // Respect the learner's opt-out: don't feed the profile into the coach.
+  const profileSummary = (await isProfileTrackingEnabled()) ? await getLearnerProfileSummary() : '';
 
   // Lesson Owner generates the KB
   if (onProgress) onProgress('initializing');
@@ -276,7 +277,8 @@ export function buildUserParts(text, imageDataUrls = [], links = []) {
 export async function sendMessage(lessonId, lesson, text, imageDataUrl, links, onStream) {
   assertNotImpersonating('send a message');
   let lessonKB = await getLessonKB(lessonId);
-  const profileSummary = await getLearnerProfileSummary();
+  // Respect the learner's opt-out: don't feed the profile into the coach.
+  const profileSummary = (await isProfileTrackingEnabled()) ? await getLearnerProfileSummary() : '';
 
   const imageDataUrls = normalizeImageDataUrls(imageDataUrl);
   const linkList = Array.isArray(links) ? links.filter((l) => l && l.url) : [];
